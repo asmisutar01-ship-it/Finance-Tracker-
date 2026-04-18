@@ -1,35 +1,3 @@
-<<<<<<< HEAD
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual Environment
-venv/
-env/
-.venv/
-
-# Environment Variables (VERY IMPORTANT)
-.env
-
-# Flask
-instance/
-*.db
-*.sqlite3
-
-# VS Code
-.vscode/
-
-# Mac/Linux
-.DS_Store
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.swp
-=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -237,4 +205,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
->>>>>>> 7eff17401f8c0f2aa23469a8e94b22aad8056aa5
