@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8 stagger">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
+        <div>
+            <h1 class="text-3xl font-bold text-content tracking-tight">Assets Portfolio</h1>
+            <p class="text-content-muted mt-1">Track fixed, liquid, and speculative assets over time.</p>
+        </div>
+        <div class="bg-surface-card border border-surface-border px-6 py-4 rounded-xl shadow-sm">
+            <p class="text-sm font-medium text-content-muted mb-1">Net Asset Wealth</p>
+            <p class="text-2xl font-bold text-primary">${{ "{:,.2f}".format(total_assets) }}</p>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Add Asset Form (Left Column) -->
+        <div class="lg:col-span-1 animate-fade-in-up" style="animation-delay: 0.1s;">
+            <div class="bg-surface-card rounded-2xl shadow-sm border border-surface-border overflow-hidden">
+                <div class="p-6 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-content flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Log Asset
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <form method="POST" action="{{ url_for('main.add_asset') }}" class="space-y-4" id="asset-form">
+                        
+                        <!-- Category Picker -->
+                        <div>
+                            <label class="block text-sm font-medium text-content-muted mb-1.5" for="category">Category</label>
+                            <div class="relative">
+                                <select id="category" name="category" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary appearance-none transition-colors">
+                                    <option value="" disabled selected>Select Category...</option>
+                                    <option value="Land">Land</option>
+                                    <option value="Gold">Gold</option>
+                                    <option value="Stocks">Stocks</option>
+                                    <option value="Vehicle">Vehicle</option>
+                                    <option value="Cash">Cash Account</option>
+                                    <option value="Crypto">Crypto</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-content-muted">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DYNAMIC FIELDS CONTAINER -->
+                        <div id="dynamic-fields-container" class="space-y-4">
+                            <!-- JS explicitly injects field HTML here depending on dropdown selection -->
+                        </div>
+
+                        <!-- Universal Value Field -->
+                        <div>
+                            <label class="block text-sm font-medium text-content-muted mb-1.5" for="value">Estimated Gross Value ($)</label>
+                            <input type="number" id="value" name="value" step="0.01" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="e.g. 15000">
+                        </div>
+
+                        <!-- Smart Loan Linking -->
+                        <div>
+                            <label class="block text-sm font-medium text-content-muted mb-1.5" for="has_loan">Does this asset have a loan/lien?</label>
+                            <select id="has_loan" name="has_loan" class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary appearance-none transition-colors">
+                                <option value="no" selected>No, fully owned</option>
+                                <option value="yes">Yes, link a loan</option>
+                            </select>
+                        </div>
+                        
+                        <div id="loan-selection-container" class="hidden">
+                            <label class="block text-sm font-medium text-content-muted mb-1.5" for="linked_loan_id">Select Linked Loan</label>
+                            <select id="linked_loan_id" name="linked_loan_id" class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                                <option value="" disabled selected>Choose active loan...</option>
+                                {% for loan in loans %}
+                                    {% if loan.remaining_balance > 0 %}
+                                    <option value="{{ loan._id }}">{{ loan.name }} (Bal: ${{ "{:,.2f}".format(loan.remaining_balance) }})</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="w-full mt-2 bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-4 rounded-xl shadow-sm transition-all focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                            Add Asset
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Assets List (Right Column) -->
+        <div class="lg:col-span-2 animate-fade-in-up" style="animation-delay: 0.2s;">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-content">Portfolio</h2>
+                <span class="text-sm text-content-muted bg-surface-card px-3 py-1 rounded-full border border-surface-border">{{ assets|length }} Assets Logged</span>
+            </div>
+            
+            {% if assets %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for asset in assets %}
+                {% if not asset.is_sold %}
+                <div class="bg-surface-card border border-surface-border rounded-xl p-5 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 border border-surface-border">
+                                {% if asset.category == 'Land' %}
+                                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                                {% elif asset.category == 'Gold' %}
+                                    <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.246 1.757M3 7.5l2.25-1.313M3 7.5l2.246 1.757M3 7.5v2.25m9 3l2.25-1.5m0 0V9m0 2.25L12 12m-2.25-1.5L12 9m0 2.25L12 12m0 0l-2.25-1.313M12 12v3.375c0 .621-.504 1.125-1.125 1.125h-3.75c-.621 0-1.125-.504-1.125-1.125v-3.375"/></svg>
+                                {% elif asset.category == 'Stocks' %}
+                                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
+                                {% elif asset.category == 'Vehicle' %}
+                                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+                                {% elif asset.category == 'Crypto' %}
+                                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"/></svg>
+                                {% else %}
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-content">{{ asset.category }}</h3>
+                                <p class="text-xs text-content-muted mt-0.5">
+                                    {% for key, val in asset.items() %}
+                                        {% if key not in ['_id', 'user_email', 'category', 'value', 'created_at', 'linked_loan_id', 'loan_balance', 'equity', 'is_sold', 'sold_price', 'sold_date', 'sell_notes', 'cash_received_from_sale'] %}
+                                            <span class="inline-block bg-surface px-1.5 py-0.5 rounded mr-1 mb-1 border border-surface-border">
+                                                <span class="opacity-70">{{ key|replace('_', ' ')|title }}:</span> {{ val }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if asset.linked_loan_id %}
+                                        <span class="inline-flex items-center gap-1 bg-semantic-redText/10 text-semantic-redText px-1.5 py-0.5 rounded mr-1 mb-1 border border-semantic-redText/20">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
+                                            Loan Linked
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 mt-3 border-t border-surface-border flex justify-between items-end">
+                        {% if asset.loan_balance > 0 %}
+                            <div class="w-full">
+                                <div class="flex justify-between text-xs text-content-muted mb-1">
+                                    <span>Gross Value</span>
+                                    <span>${{ "{:,.2f}".format(asset.value) }}</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-semantic-redText mb-2">
+                                    <span>Liabilities (Debt)</span>
+                                    <span>-${{ "{:,.2f}".format(asset.loan_balance) }}</span>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-surface-border pt-1">
+                                    <p class="text-sm font-medium text-primary mb-0.5">True Equity</p>
+                                    <p class="text-lg font-bold text-content">${{ "{:,.2f}".format(asset.equity) }}</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="w-full">
+                                <p class="text-xs text-content-muted mb-0.5">Total Equity</p>
+                                <p class="text-lg font-bold text-content">${{ "{:,.2f}".format(asset.equity) }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Form for Liquidating / Selling -->
+                    <div class="mt-4 pt-4 border-t border-surface-border hidden" id="sell-form-{{ asset._id }}">
+                        <form method="POST" action="{{ url_for('main.sell_asset', asset_id=asset._id) }}" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-content-muted mb-1">Selling Date</label>
+                                <input type="date" name="sold_date" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-content-muted mb-1">Sold Price ($)</label>
+                                <input type="number" step="0.01" name="sold_price" placeholder="e.g. {{ asset.value }}" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-content-muted mb-1">Notes (Optional)</label>
+                                <input type="text" name="notes" placeholder="Buyer info..." class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="flex-1 bg-semantic-emerald text-white text-sm font-medium py-2 rounded-lg hover:bg-semantic-emerald/90 transition-colors">Confirm Sale</button>
+                                <button type="button" onclick="document.getElementById('sell-form-{{ asset._id }}').classList.add('hidden')" class="px-3 bg-surface text-content text-sm font-medium rounded-lg border border-surface-border hover:bg-surface-hover transition-colors">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Edit Form (hidden by default) -->
+                    <div class="mt-4 pt-4 border-t border-surface-border hidden" id="edit-form-{{ asset._id }}">
+                        <form method="POST" action="{{ url_for('main.edit_asset', asset_id=asset._id) }}" class="space-y-3">
+                            <p class="text-xs font-semibold text-content-muted uppercase tracking-wider mb-2">Edit Asset</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-content-muted mb-1">Category</label>
+                                    <input type="text" name="category" value="{{ asset.category }}" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-content-muted mb-1">Gross Value ($)</label>
+                                    <input type="number" step="0.01" name="value" value="{{ asset.value }}" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                </div>
+                            </div>
+                            <!-- Dynamic fields from the asset -->
+                            {% for key, val in asset.items() %}
+                                {% if key not in ['_id', 'user_email', 'category', 'value', 'created_at', 'linked_loan_id', 'loan_balance', 'equity', 'is_sold', 'sold_price', 'sold_date', 'sell_notes', 'cash_received_from_sale'] %}
+                                <div>
+                                    <label class="block text-xs font-medium text-content-muted mb-1">{{ key|replace('_', ' ')|title }}</label>
+                                    <input type="text" name="{{ key }}" value="{{ val }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                            <div class="flex gap-2 pt-1">
+                                <button type="submit" class="flex-1 bg-primary text-white text-sm font-medium py-2 rounded-lg hover:bg-primary-hover transition-colors">Save Changes</button>
+                                <button type="button" onclick="document.getElementById('edit-form-{{ asset._id }}').classList.add('hidden')" class="px-3 bg-surface text-content text-sm font-medium rounded-lg border border-surface-border hover:bg-surface-hover transition-colors">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Action buttons toolbar: Edit + Sell -->
+                    <div class="absolute top-4 right-4 flex gap-1.5">
+                        <button onclick="document.getElementById('edit-form-{{ asset._id }}').classList.toggle('hidden'); document.getElementById('sell-form-{{ asset._id }}').classList.add('hidden')" class="text-xs font-medium bg-primary/10 hover:bg-primary text-primary hover:text-white px-2 py-1 rounded border border-primary/20 transition-colors">
+                            Edit
+                        </button>
+                        <button onclick="document.getElementById('sell-form-{{ asset._id }}').classList.toggle('hidden'); document.getElementById('edit-form-{{ asset._id }}').classList.add('hidden')" class="text-xs font-medium bg-surface hover:bg-surface-hover text-content-muted hover:text-content px-2 py-1 rounded border border-surface-border transition-colors">
+                            Sell
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            
+            <div class="mt-12 mb-4 flex items-center justify-between border-b-2 border-surface-border/50 pb-2">
+                <h2 class="text-lg font-semibold text-content-muted">Liquidated Portfolio</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
+                {% for asset in assets %}
+                {% if asset.is_sold %}
+                <div class="bg-surface border border-surface-border rounded-xl p-5 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-surface-card flex items-center justify-center flex-shrink-0 border border-surface-border">
+                                 <svg class="w-4 h-4 text-content-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-content-muted line-through">{{ asset.category }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-3 mt-3 border-t border-surface-border flex justify-between items-end">
+                        <div class="w-full">
+                            <div class="flex justify-between text-xs text-content-muted mb-1">
+                                <span>Sold Price</span>
+                                <span>${{ "{:,.2f}".format(asset.sold_price) }}</span>
+                            </div>
+                            <div class="flex justify-between items-end border-t border-surface-border pt-1">
+                                <p class="text-sm font-medium text-content mb-0.5">Asset Profit/Loss</p>
+                                {% set pnl = asset.sold_price - asset.value %}
+                                <p class="text-lg font-bold {% if pnl >= 0 %}text-semantic-emeraldText{% else %}text-semantic-redText{% endif %}">
+                                    {% if pnl > 0 %}+${{ "{:,.2f}".format(pnl) }}
+                                    {% elif pnl < 0 %}-${{ "{:,.2f}".format(pnl|abs) }}
+                                    {% else %}$0.00{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-surface-card border border-surface-border rounded-xl p-12 text-center">
+                <div class="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 border border-surface-border">
+                    <svg class="w-8 h-8 text-content-muted" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z"/></svg>
+                </div>
+                <h3 class="text-lg font-medium text-content mb-1">No Assets Logged</h3>
+                <p class="text-content-muted max-w-sm mx-auto">Start building your portfolio tracker securely by logging your first asset on the left.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- DYNAMIC JAVASCRIPT FOR TEMPLATING FORMS WITHOUT PAGE RELOAD -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.getElementById('category');
+        const dynamicContainer = document.getElementById('dynamic-fields-container');
+        
+        const hasLoanSelect = document.getElementById('has_loan');
+        const loanSelectionContainer = document.getElementById('loan-selection-container');
+        const linkedLoanId = document.getElementById('linked_loan_id');
+
+        // Field HTML Configurations for varying Asset types
+        const fieldTemplates = {
+            'Land': `
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="land_type">Land Type</label>
+                    <select id="land_type" name="land_type" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="Farming">Farming / Agriculture</option>
+                        <option value="Commercial">Commercial / Plot</option>
+                        <option value="Residential">Residential</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="location">Location / Area</label>
+                    <input type="text" id="location" name="location" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., Downtown District">
+                </div>
+            `,
+            'Gold': `
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="weight">Weight (Grams)</label>
+                    <input type="number" step="0.1" id="weight" name="weight" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., 50.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="purity">Purity (Karats)</label>
+                    <select id="purity" name="purity" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="24K">24 Karat (99.9%)</option>
+                        <option value="22K">22 Karat (91.6%)</option>
+                        <option value="18K">18 Karat (75.0%)</option>
+                    </select>
+                </div>
+            `,
+            'Stocks': `
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="ticker">Stock Ticker / Name</label>
+                    <input type="text" id="ticker" name="ticker" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., AAPL">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="quantity">Quantity (Shares)</label>
+                    <input type="number" step="0.001" id="quantity" name="quantity" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., 150">
+                </div>
+            `,
+            'Vehicle': `
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="vehicle_type">Vehicle Type</label>
+                    <select id="vehicle_type" name="vehicle_type" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="Sedan">Sedan</option>
+                        <option value="SUV">SUV</option>
+                        <option value="Truck">Truck</option>
+                        <option value="Motorcycle">Motorcycle</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="model">Make & Model</label>
+                    <input type="text" id="model" name="model" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., Toyota Camry 2022">
+                </div>
+            `,
+            'Crypto': `
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="coin">Coin / Token Name</label>
+                    <input type="text" id="coin" name="coin" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., Bitcoin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="quantity">Number of Coins</label>
+                    <input type="number" step="0.00000001" id="quantity" name="quantity" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g., 0.5">
+                </div>
+            `,
+            'Cash': `
+                <div>
+                    <label class="block text-sm font-medium text-content-muted mb-1.5" for="account_type">Account Type</label>
+                    <select id="account_type" name="account_type" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="Checking">Checking Account</option>
+                        <option value="Savings">Savings Account</option>
+                        <option value="Physical">Physical Safe / Mattress</option>
+                    </select>
+                </div>
+            `
+        };
+
+        // Attach event listener to switch out fields
+        categorySelect.addEventListener('change', function() {
+            const selectedCategory = this.value;
+            // Inject new HTML cleanly
+            dynamicContainer.innerHTML = fieldTemplates[selectedCategory] || '';
+        });
+        
+        // Attach event listener for the Loan Linking toggle
+        hasLoanSelect.addEventListener('change', function() {
+            if (this.value === 'yes') {
+                loanSelectionContainer.classList.remove('hidden');
+                linkedLoanId.required = true;
+            } else {
+                loanSelectionContainer.classList.add('hidden');
+                linkedLoanId.required = false;
+                linkedLoanId.value = '';
+            }
+        });
+    });
+</script>
+
+{% endblock %}

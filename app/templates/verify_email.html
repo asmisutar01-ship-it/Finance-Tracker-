@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center animate-fade-in-up">
+    <div class="w-full max-w-md">
+        <div class="bg-surface-card rounded-2xl shadow-xl border border-surface-border overflow-hidden text-center">
+            <div class="px-8 pt-10 pb-8">
+                <!-- Animated icon -->
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-semantic-emeraldLight mb-6">
+                    <svg class="w-8 h-8 text-semantic-emeraldText" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                </div>
+                
+                <h1 class="text-2xl font-extrabold text-content tracking-tight mb-2">Check your email</h1>
+                <p class="text-sm text-content-muted mb-6">
+                    We've sent a verification link to<br>
+                    <span class="font-semibold text-content mt-1 inline-block">{{ email }}</span>
+                </p>
+
+                <!-- Simulation notice -->
+                <div class="bg-primary-light/10 border border-primary/20 rounded-xl p-4 mb-8 text-left">
+                    <div class="flex gap-3">
+                        <svg class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
+                        <p class="text-sm text-content"><strong>Demo mode:</strong> No real email was sent. You can proceed to login directly.</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <a href="{{ url_for('main.login') }}" class="w-full flex justify-center py-3 px-4 bg-primary text-white text-sm font-semibold rounded-xl shadow-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-all">
+                        Continue to Login
+                    </a>
+                    
+                    <button class="w-full flex justify-center py-3 px-4 border border-surface-border text-content-muted text-sm font-medium rounded-xl hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+                        Resend email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

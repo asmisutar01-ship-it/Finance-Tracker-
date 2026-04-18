@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8 stagger">
+
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-card border border-surface-border p-6 rounded-2xl animate-fade-in-up">
+        <div>
+            <h1 class="text-3xl font-bold text-content tracking-tight">Insurance Policies</h1>
+            <p class="text-content-muted mt-1">Manage health, life, vehicle, and ULIP policies seamlessly.</p>
+        </div>
+        <div class="flex flex-col items-end">
+            <p class="text-sm font-semibold text-content-muted uppercase tracking-wider">Total Cash Value</p>
+            <p class="text-2xl font-bold text-primary">${{ "{:,.2f}".format(total_cash_value) }}</p>
+        </div>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Add Policy Form (Left Column) -->
+        <div class="lg:col-span-4 animate-fade-in-up" style="animation-delay: 100ms;">
+            <div class="bg-surface-card border border-surface-border rounded-xl p-6 sticky top-6">
+                <h2 class="text-lg font-semibold text-content mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    Add Policy
+                </h2>
+                <form action="{{ url_for('main.add_insurance') }}" method="POST" class="space-y-4">
+                    <!-- Policy Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-content mb-1">Policy Type</label>
+                        <select name="policy_type" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                            <option value="">Select Category</option>
+                            <option value="Term Life">Term Life</option>
+                            <option value="ULIP">ULIP / Whole Life</option>
+                            <option value="Health">Health Insurance</option>
+                            <option value="Vehicle">Vehicle Insurance</option>
+                            <option value="Home">Home / Property</option>
+                        </select>
+                    </div>
+
+                    <!-- Provider Details -->
+                    <div>
+                        <label class="block text-sm font-medium text-content mb-1">Provider Name</label>
+                        <input type="text" name="provider" placeholder="e.g. LIC, State Farm" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Premium -->
+                        <div>
+                            <label class="block text-sm font-medium text-content mb-1">Premium ($)</label>
+                            <input type="number" step="0.01" name="premium" placeholder="Amount" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
+                        </div>
+                        <!-- Coverage -->
+                        <div>
+                            <label class="block text-sm font-medium text-content mb-1">Coverage ($)</label>
+                            <input type="number" step="0.01" name="coverage" placeholder="Sum Assured" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
+                        </div>
+                    </div>
+
+                    <!-- Billing Logic -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-content mb-1">Billing Cycle</label>
+                            <select name="billing_cycle" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Yearly" selected>Yearly</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-content mb-1">Next Due</label>
+                            <input type="date" name="next_due_date" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
+                        </div>
+                    </div>
+
+                    <!-- Cash Value (Assets) -->
+                    <div class="pt-2 border-t border-surface-border">
+                        <label class="flex items-center gap-2 text-sm font-medium text-content mb-2 cursor-pointer">
+                            <input type="checkbox" name="has_cash_value" id="has_cash_value" class="rounded border-surface-border text-primary focus:ring-primary w-4 h-4 bg-surface-input">
+                            Has Liquid Cash Value (ULIP/Whole Life)?
+                        </label>
+                        <div id="cash-value-container" class="hidden mt-2">
+                            <label class="block text-sm font-medium text-content mb-1">Current Cash Value ($)</label>
+                            <input type="number" step="0.01" name="cash_value" id="cash_value_input" placeholder="e.g. 5000" class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
+                            <p class="text-xs text-content-muted mt-1">This value will automatically pull into your overall Net Worth tracker.</p>
+                        </div>
+                    </div>
+
+                    <button type="submit" name="submit" class="w-full flex justify-center items-center gap-2 py-2.5 px-4 mt-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all">
+                        Create Policy
+                    </button>
+                    <p class="text-[11px] text-center text-content-muted">The primary premium will instantly sync to your Expense dashboard.</p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Active Policies List (Right Column) -->
+        <div class="lg:col-span-8 animate-fade-in-up" style="animation-delay: 200ms;">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-content">Active Policies</h2>
+                <span class="text-sm text-content-muted bg-surface-card px-3 py-1 rounded-full border border-surface-border">{{ policies|length }} Active</span>
+            </div>
+
+            {% if policies %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for policy in policies %}
+                <div class="bg-surface-card border border-surface-border rounded-xl p-5 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 border border-surface-border">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-content">{{ policy.policy_type }}</h3>
+                                <p class="text-xs text-content-muted mt-0.5">By {{ policy.provider }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-surface-border">
+                        <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
+                            <div>
+                                <p class="text-content-muted text-xs">Coverage</p>
+                                <p class="font-medium text-content">${{ "{:,.2f}".format(policy.coverage) }}</p>
+                            </div>
+                            {% if policy.has_cash_value %}
+                            <div>
+                                <p class="text-primary text-xs font-semibold">Cash Value</p>
+                                <p class="font-medium text-content">${{ "{:,.2f}".format(policy.cash_value) }}</p>
+                            </div>
+                            {% else %}
+                            <div>
+                                <p class="text-content-muted text-xs">Type</p>
+                                <p class="font-medium text-content uppercase text-[10px]">Pure Expense</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex items-center justify-between bg-surface p-3 rounded-lg border border-surface-border">
+                            <div>
+                                <p class="text-xs text-content-muted font-medium mb-0.5">Due: <span class="text-content font-semibold">{{ policy.next_due_date }}</span></p>
+                                <p class="text-[11px] text-content-muted uppercase tracking-wider">{{ policy.billing_cycle }} Premium</p>
+                                <p class="font-bold text-semantic-redText">-${{ "{:,.2f}".format(policy.premium) }}</p>
+                            </div>
+                            <form action="{{ url_for('main.pay_insurance_premium', policy_id=policy._id) }}" method="POST">
+                                <button type="submit" class="text-[11px] font-semibold text-primary hover:text-white bg-primary/10 hover:bg-primary transition-colors px-3 py-1.5 rounded-md border border-primary/20">
+                                    Pay Premium
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Edit Form (hidden by default) -->
+                        <div class="mt-4 pt-4 border-t border-surface-border hidden" id="edit-ins-{{ policy._id }}">
+                            <form method="POST" action="{{ url_for('main.edit_insurance', policy_id=policy._id) }}" class="space-y-3">
+                                <p class="text-xs font-semibold text-content-muted uppercase tracking-wider mb-2">Edit Policy</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Provider</label>
+                                        <input type="text" name="provider" value="{{ policy.provider }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Policy Type</label>
+                                        <input type="text" name="policy_type" value="{{ policy.policy_type }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Premium ($)</label>
+                                        <input type="number" step="0.01" name="premium" value="{{ policy.premium }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Coverage ($)</label>
+                                        <input type="number" step="0.01" name="coverage" value="{{ policy.coverage }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Next Due Date</label>
+                                        <input type="date" name="next_due_date" value="{{ policy.next_due_date }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Billing Cycle</label>
+                                        <select name="billing_cycle" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                            <option value="Monthly" {% if policy.billing_cycle == 'Monthly' %}selected{% endif %}>Monthly</option>
+                                            <option value="Quarterly" {% if policy.billing_cycle == 'Quarterly' %}selected{% endif %}>Quarterly</option>
+                                            <option value="Yearly" {% if policy.billing_cycle == 'Yearly' %}selected{% endif %}>Yearly</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <!-- Cash Value Toggle -->
+                                <div class="pt-2 border-t border-surface-border">
+                                    <label class="flex items-center gap-2 text-xs font-medium text-content cursor-pointer mb-2">
+                                        <input type="checkbox" name="has_cash_value" class="edit-cv-toggle w-4 h-4 rounded" data-target="edit-cv-{{ policy._id }}" {% if policy.has_cash_value %}checked{% endif %}>
+                                        Has Cash Value?
+                                    </label>
+                                    <div id="edit-cv-{{ policy._id }}" class="{% if not policy.has_cash_value %}hidden{% endif %}">
+                                        <label class="block text-xs font-medium text-content-muted mb-1">Cash Value ($)</label>
+                                        <input type="number" step="0.01" name="cash_value" value="{{ policy.cash_value }}" class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 pt-1">
+                                    <button type="submit" class="flex-1 bg-primary text-white text-sm font-medium py-2 rounded-lg hover:bg-primary-hover transition-colors">Save Changes</button>
+                                    <button type="button" onclick="document.getElementById('edit-ins-{{ policy._id }}').classList.add('hidden')" class="px-3 bg-surface text-content text-sm font-medium rounded-lg border border-surface-border hover:bg-surface-hover transition-colors">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Edit button top-right -->
+                    <button onclick="document.getElementById('edit-ins-{{ policy._id }}').classList.toggle('hidden')" class="absolute top-4 right-4 text-xs font-medium bg-primary/10 hover:bg-primary text-primary hover:text-white px-2 py-1 rounded border border-primary/20 transition-colors">
+                        Edit
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-surface-card border border-surface-border rounded-xl p-12 text-center">
+                <div class="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 border border-surface-border">
+                    <svg class="w-8 h-8 text-content-muted" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+                </div>
+                <h3 class="text-lg font-medium text-content mb-1">No Active Policies</h3>
+                <p class="text-content-muted max-w-sm mx-auto">Keep track of your health, vehicle, and life insurances. Add your first policy on the left.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Add Policy form: cash value toggle
+        const toggle = document.getElementById('has_cash_value');
+        const container = document.getElementById('cash-value-container');
+        const input = document.getElementById('cash_value_input');
+        if (toggle) {
+            toggle.addEventListener('change', function() {
+                if (this.checked) {
+                    container.classList.remove('hidden');
+                    input.setAttribute('required', 'required');
+                } else {
+                    container.classList.add('hidden');
+                    input.removeAttribute('required');
+                    input.value = '';
+                }
+            });
+        }
+
+        // Edit Policy forms: cash value toggles
+        document.querySelectorAll('.edit-cv-toggle').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const targetId = this.getAttribute('data-target');
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    targetEl.classList.toggle('hidden', !this.checked);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center animate-fade-in-up">
+    <div class="w-full max-w-md">
+        <div class="bg-surface-card rounded-2xl shadow-xl border border-surface-border overflow-hidden">
+            <div class="px-8 pt-10 pb-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-light to-primary shadow-lg mb-5">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg>
+                    </div>
+                    <h1 class="text-2xl font-extrabold text-content tracking-tight">Welcome back</h1>
+                    <p class="mt-1.5 text-sm text-content-muted">Sign in to access your dashboard</p>
+                </div>
+                
+                <!-- Form -->
+                <form action="{{ url_for('main.login') }}" method="POST" class="space-y-5">
+                    <div>
+                        <label for="email" class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Email Address</label>
+                        <input id="email" name="email" type="email" required class="block w-full px-4 py-3 text-sm border border-surface-border rounded-xl bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="you@example.com">
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Password</label>
+                        <input id="password" name="password" type="password" required class="block w-full px-4 py-3 text-sm border border-surface-border rounded-xl bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="••••••••">
+                    </div>
+
+                    <div class="flex items-center justify-between text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="remember_me" class="w-4 h-4 rounded border-surface-border text-primary focus:ring-primary/40 bg-surface-input">
+                            <span class="text-content-muted group-hover:text-content transition-colors">Remember me</span>
+                        </label>
+                        <a href="#" class="font-medium text-primary hover:text-primary-hover transition-colors">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 bg-primary text-white text-sm font-semibold rounded-xl shadow-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-all">
+                        Sign in
+                    </button>
+                </form>
+            </div>
+            
+            <div class="bg-surface-base border-t border-surface-border px-8 py-5 text-center">
+                <p class="text-sm text-content-muted">
+                    Don't have an account? 
+                    <a href="{{ url_for('main.signup') }}" class="font-semibold text-primary hover:text-primary-hover transition-colors">Create one free</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

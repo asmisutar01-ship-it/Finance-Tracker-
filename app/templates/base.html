@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceTracker Pro</title>
+    <meta name="description" content="A professional personal finance tracker to manage your income, expenses, and savings goals.">
+    
+    <!-- Theme Manager (Runs early to prevent flash) -->
+    <script>
+        function applyTheme(theme) {
+            document.documentElement.classList.remove('theme-light', 'theme-dark', 'theme-warm');
+            
+            if (theme === 'system') {
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.add(systemDark ? 'theme-dark' : 'theme-light');
+            } else {
+                document.documentElement.classList.add(`theme-${theme}`);
+            }
+            localStorage.setItem('theme_preference', theme);
+        }
+
+        const savedTheme = localStorage.getItem('theme_preference') || 'system';
+        applyTheme(savedTheme);
+
+        // Listen for system changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (localStorage.getItem('theme_preference') === 'system') {
+                applyTheme('system');
+            }
+        });
+    </script>
+
+    <style>
+        /* Base Light Theme (Default) */
+        :root, .theme-light {
+            --surface-base: #f8fafc;
+            --surface-card: #ffffff;
+            --surface-input: #f8fafc;
+            --surface-border: #e2e8f0;
+            --surface-hover: #f1f5f9;
+            
+            --content-base: #0f172a;
+            --content-muted: #64748b;
+            
+            --brand-primary: #4f46e5;
+            --brand-primary-light: #6366f1;
+            --brand-primary-hover: #4338ca;
+            
+            --color-emerald: #10b981;
+            --color-emerald-light: #d1fae5;
+            --color-emerald-text: #047857;
+            
+            --color-red: #ef4444;
+            --color-red-light: #fee2e2;
+            --color-red-text: #b91c1c;
+
+            --color-orange: #f97316;
+            --color-orange-light: #ffedd5;
+            --color-orange-text: #c2410c;
+        }
+
+        /* Dark Theme */
+        .theme-dark {
+            --surface-base: #020617;
+            --surface-card: #0f172a;
+            --surface-input: #1e293b;
+            --surface-border: #334155;
+            --surface-hover: #1e293b;
+            
+            --content-base: #f8fafc;
+            --content-muted: #94a3b8;
+            
+            --brand-primary: #6366f1;
+            --brand-primary-light: #4f46e5;
+            --brand-primary-hover: #818cf8;
+
+            --color-emerald: #10b981;
+            --color-emerald-light: #064e3b;
+            --color-emerald-text: #34d399;
+            
+            --color-red: #ef4444;
+            --color-red-light: #7f1d1d;
+            --color-red-text: #f87171;
+
+            --color-orange: #f97316;
+            --color-orange-light: #7c2d12;
+            --color-orange-text: #fb923c;
+        }
+
+        /* Warm / Eye Care Theme */
+        .theme-warm {
+            --surface-base: #fdf6e3;
+            --surface-card: #fffbf0;
+            --surface-input: #fdf6e3;
+            --surface-border: #e6e0cc;
+            --surface-hover: #f1eddd;
+            
+            --content-base: #5c4b37;
+            --content-muted: #857865;
+            
+            --brand-primary: #8b5a2b;
+            --brand-primary-light: #a06e3d;
+            --brand-primary-hover: #724720;
+            
+            --color-emerald: #4d7c0f;
+            --color-emerald-light: #e6f0d4;
+            --color-emerald-text: #3f6212;
+            
+            --color-red: #991b1b;
+            --color-red-light: #fbe6e6;
+            --color-red-text: #7f1d1d;
+
+            --color-orange: #b45309;
+            --color-orange-light: #fef0cd;
+            --color-orange-text: #92400e;
+        }
+
+        body { font-family: 'Inter', system-ui, sans-serif; }
+
+        /* Smooth page fade-in */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp .45s ease-out both; }
+
+        /* Stagger children */
+        .stagger > *:nth-child(1) { animation-delay: .05s; }
+        .stagger > *:nth-child(2) { animation-delay: .10s; }
+        .stagger > *:nth-child(3) { animation-delay: .15s; }
+        .stagger > *:nth-child(4) { animation-delay: .20s; }
+        .stagger > *:nth-child(5) { animation-delay: .25s; }
+
+        /* Custom scrollbar for lists */
+        .scroll-thin::-webkit-scrollbar { width: 5px; }
+        .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+        .scroll-thin::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 99px; }
+        .scroll-thin::-webkit-scrollbar-thumb:hover { background: var(--content-muted); }
+
+        /* Toast slide-in */
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(30px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in { animation: slideInRight .35s ease-out both; }
+
+        /* Select arrow styling for all themes */
+        select { color: var(--content-base); }
+        option { background-color: var(--surface-card); color: var(--content-base); }
+    </style>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Disable native dark mode mapping
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        surface: {
+                            DEFAULT: 'var(--surface-base)',
+                            card: 'var(--surface-card)',
+                            input: 'var(--surface-input)',
+                            border: 'var(--surface-border)',
+                            hover: 'var(--surface-hover)'
+                        },
+                        content: {
+                            DEFAULT: 'var(--content-base)',
+                            muted: 'var(--content-muted)'
+                        },
+                        primary: {
+                            DEFAULT: 'var(--brand-primary)',
+                            light: 'var(--brand-primary-light)',
+                            hover: 'var(--brand-primary-hover)'
+                        },
+                        semantic: {
+                            emerald: 'var(--color-emerald)',
+                            emeraldLight: 'var(--color-emerald-light)',
+                            emeraldText: 'var(--color-emerald-text)',
+                            red: 'var(--color-red)',
+                            redLight: 'var(--color-red-light)',
+                            redText: 'var(--color-red-text)',
+                            orange: 'var(--color-orange)',
+                            orangeLight: 'var(--color-orange-light)',
+                            orangeText: 'var(--color-orange-text)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-content min-h-screen flex flex-col antialiased transition-colors duration-300">
+
+    <!-- ═══════════ Sidebar Overlay ═══════════ -->
+    <div id="sidebar-overlay" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300" onclick="closeSidebar()"></div>
+
+    <!-- ═══════════ Slide-out Sidebar ═══════════ -->
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-72 z-50 bg-surface-card border-r border-surface-border shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        <!-- Sidebar Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+            <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-md">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <span class="text-lg font-bold text-content tracking-tight">Finance<span class="text-primary">Tracker</span></span>
+            </a>
+            <button onclick="closeSidebar()" class="p-2 rounded-lg text-content-muted hover:bg-surface-hover hover:text-content transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <!-- User Badge -->
+        {% if session.get('user_email') %}
+        <div class="px-5 py-4 border-b border-surface-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-primary font-bold text-sm">{{ session.get('user_name', 'U')[0].upper() }}</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-content truncate">{{ session.get('user_name', 'User') }}</p>
+                    <p class="text-xs text-content-muted truncate">{{ session.get('user_email', '') }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Nav Links -->
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {% if session.get('user_email') %}
+            {% set nav_items = [
+                ('main.profile',      'Dashboard',  'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z'),
+                ('main.assets',       'Assets',     'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'),
+                ('main.loans',        'Loans',      'M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z'),
+                ('main.insurance',    'Insurance',  'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z'),
+                ('main.user_profile', 'Profile',    'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z')
+            ] %}
+            {% for endpoint, label, icon_path in nav_items %}
+            <a href="{{ url_for(endpoint) }}" onclick="closeSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                      {% if request.endpoint == endpoint %}bg-primary text-white shadow-sm{% else %}text-content-muted hover:bg-surface-hover hover:text-content{% endif %}">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                            {% if request.endpoint == endpoint %}bg-white/20{% else %}bg-surface border border-surface-border{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ icon_path }}"/>
+                    </svg>
+                </div>
+                {{ label }}
+                {% if request.endpoint == endpoint %}
+                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                {% endif %}
+            </a>
+            {% endfor %}
+            {% endif %}
+        </nav>
+
+        <!-- Bottom: Theme + Logout -->
+        <div class="px-3 py-4 border-t border-surface-border space-y-1">
+            <!-- Theme picker row -->
+            <div class="flex items-center gap-1 px-3 py-2">
+                <span class="text-xs text-content-muted mr-2">Theme</span>
+                <button onclick="applyTheme('light')" title="Light" class="p-1.5 rounded-lg hover:bg-surface-hover transition-all"><svg class="w-4 h-4 text-content-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg></button>
+                <button onclick="applyTheme('dark')" title="Dark" class="p-1.5 rounded-lg hover:bg-surface-hover transition-all"><svg class="w-4 h-4 text-content-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg></button>
+                <button onclick="applyTheme('system')" title="System" class="p-1.5 rounded-lg hover:bg-surface-hover transition-all"><svg class="w-4 h-4 text-content-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"/></svg></button>
+                <button onclick="applyTheme('warm')" title="Eye Care" class="p-1.5 rounded-lg hover:bg-surface-hover transition-all"><svg class="w-4 h-4 text-content-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg></button>
+            </div>
+            {% if session.get('user_email') %}
+            <a href="{{ url_for('main.logout') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-semantic-redText hover:bg-semantic-redLight transition-all">
+                <div class="w-8 h-8 rounded-lg bg-semantic-redLight flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+                </div>
+                Logout
+            </a>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- ═══════════ Top Bar (Hamburger) ═══════════ -->
+    <nav class="sticky top-0 z-30 bg-surface-card/90 backdrop-blur-lg border-b border-surface-border shadow-sm transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="text-xl font-bold text-content tracking-tight">Finance<span class="text-primary">Tracker</span></span>
+                </a>
+
+                <!-- Right side: user pill + hamburger -->
+                <div class="flex items-center gap-3">
+                    {% if session.get('user_email') %}
+                    <div class="hidden sm:flex items-center gap-2 text-sm text-content-muted">
+                        <div class="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                            <span class="text-primary font-bold text-xs">{{ session.get('user_name', 'U')[0].upper() }}</span>
+                        </div>
+                        <span class="font-medium text-content">{{ session.get('user_name', 'User') }}</span>
+                    </div>
+                    {% endif %}
+                    <!-- Hamburger button -->
+                    <button id="hamburger-btn" onclick="openSidebar()" aria-label="Open menu"
+                            class="p-2.5 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-content-muted hover:text-content transition-all focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <svg id="hamburger-icon" class="w-5 h-5 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        function openSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            requestAnimationFrame(() => overlay.classList.add('opacity-100') || overlay.classList.remove('opacity-0'));
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+            document.body.style.overflow = '';
+        }
+        // Close on Escape key
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+    </script>
+
+    <!-- ═══════════ Flash Messages (Toast style) ═══════════ -->
+    <div class="fixed top-20 right-6 z-50 space-y-3 w-full max-w-sm pointer-events-none">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="animate-slide-in pointer-events-auto rounded-xl p-4 shadow-lg backdrop-blur-sm border bg-surface-card border-surface-border">
+                        <div class="flex items-center gap-3">
+                            {% if category == 'error' %}
+                                <svg class="w-5 h-5 text-semantic-red flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
+                                <p class="text-sm font-medium text-semantic-redText">{{ message }}</p>
+                            {% elif category == 'success' %}
+                                <svg class="w-5 h-5 text-semantic-emerald flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+                                <p class="text-sm font-medium text-semantic-emeraldText">{{ message }}</p>
+                            {% else %}
+                                <svg class="w-5 h-5 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
+                                <p class="text-sm font-medium text-content">{{ message }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- ═══════════ Main Content ═══════════ -->
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ═══════════ Footer ═══════════ -->
+    <footer class="border-t border-surface-border py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-content-muted">
+            &copy; 2026 FinanceTracker Pro &middot; Built with Flask &amp; MongoDB
+        </div>
+    </footer>
+
+    <!-- Auto-dismiss flash toasts after 4 seconds -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.animate-slide-in').forEach(el => {
+                setTimeout(() => {
+                    el.style.transition = 'opacity .4s, transform .4s';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateX(30px)';
+                    setTimeout(() => el.remove(), 400);
+                }, 4000);
+            });
+        });
+    </script>
+</body>
+</html>
