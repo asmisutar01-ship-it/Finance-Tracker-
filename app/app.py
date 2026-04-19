@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from app.database import init_db
 from app.routes import main as main_blueprint
 
 # Global mail object – imported by routes
@@ -28,9 +27,6 @@ def create_app():
 
     # Initialize extensions
     mail.init_app(app)
-
-    # Attach DB to Flask app without app_context
-    init_db(app)
 
     # Register blueprints
     app.register_blueprint(main_blueprint)
