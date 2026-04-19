@@ -1,3 +1,17 @@
+import os
+from flask import Flask
+from flask_mail import Mail
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+from app.database import init_db
+from app.routes import main as main_blueprint
+
+# Global mail object – imported by routes
+mail = Mail()
+
 def create_app():
     app = Flask(__name__)
 
@@ -22,3 +36,11 @@ def create_app():
     app.register_blueprint(main_blueprint)
 
     return app
+
+# Initialize globally for Gunicorn
+app = create_app()
+
+if __name__ == "__main__":
+    # Ensure port binding works correctly in various environments
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
