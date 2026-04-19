@@ -29,7 +29,7 @@ def create_app():
     # Initialize extensions
     mail.init_app(app)
 
-    # ✅ FIXED DATABASE INIT
+    # Attach DB to Flask app without app_context
     init_db(app)
 
     # Register blueprints
