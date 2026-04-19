@@ -1,5 +1,6 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import get_db
+from utils.helpers import safe_float
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import random
@@ -139,7 +140,7 @@ class Expense:
         db = get_db()
         expense_doc = {
             "user_email": user_email.lower(),
-            "amount": float(amount),
+            "amount": safe_float(amount),
             "category": category,
             "date": date_str
         }
@@ -216,7 +217,7 @@ class Income:
         db = get_db()
         income_doc = {
             "user_email": user_email.lower(),
-            "amount": float(amount),
+            "amount": safe_float(amount),
             "source": source,
             "date": date_str
         }
@@ -286,11 +287,11 @@ class Loan:
         loan_doc = {
             "user_email": user_email.lower(),
             "name": name,
-            "principal_amount": float(principal),
-            "interest_rate": float(annual_rate),
+            "principal_amount": safe_float(principal),
+            "interest_rate": safe_float(annual_rate),
             "tenure_months": int(tenure_months),
-            "emi": float(emi),
-            "remaining_balance": float(principal),
+            "emi": safe_float(emi),
+            "remaining_balance": safe_float(principal),
             "created_at": datetime.utcnow()
         }
         result = db.loans.insert_one(loan_doc)
@@ -362,7 +363,7 @@ class LoanPayment:
         doc = {
             "loan_id": loan_id,
             "user_email": user_email.lower(),
-            "amount": float(amount),
+            "amount": safe_float(amount),
             "date": date_str,
             "created_at": datetime.utcnow()
         }
@@ -377,7 +378,7 @@ class Asset:
         asset_doc = {
             "user_email": user_email.lower(),
             "category": category,
-            "value": float(value),
+            "value": safe_float(value),
             "created_at": datetime.utcnow()
         }
         
@@ -429,7 +430,7 @@ class Asset:
         # Cast value to float if present
         if 'value' in safe_fields:
             try:
-                safe_fields['value'] = float(safe_fields['value'])
+                safe_fields['value'] = safe_float(safe_fields['value'])
             except ValueError:
                 pass
         
@@ -459,7 +460,7 @@ class Asset:
         # Globally pull Insurance cash value explicitly acting as pure hard assets
         try:
             from models import Insurance
-            total += float(Insurance.get_total_cash_value(user_email))
+            total += safe_float(Insurance.get_total_cash_value(user_email))
         except:
             pass
             
@@ -475,7 +476,7 @@ class Asset:
         if not asset:
             return False, "Asset not found."
             
-        sold_price_val = float(sold_price)
+        sold_price_val = safe_float(sold_price)
         remaining_loan = 0.0
         
         # Check if asset has loan
@@ -534,12 +535,12 @@ class Insurance:
             "user_email": user_email.lower(),
             "policy_type": policy_type,
             "provider": provider,
-            "premium": float(premium),
-            "coverage": float(coverage),
+            "premium": safe_float(premium),
+            "coverage": safe_float(coverage),
             "next_due_date": next_due_date,
             "billing_cycle": billing_cycle,
             "has_cash_value": str(has_cash_value).lower() in ["true", "1", "yes", "on"],
-            "cash_value": float(cash_value) if str(has_cash_value).lower() in ["true", "1", "yes", "on"] else 0.0,
+            "cash_value": safe_float(cash_value) if str(has_cash_value).lower() in ["true", "1", "yes", "on"] else 0.0,
             "created_at": datetime.utcnow()
         }
         res = db.insurances.insert_one(doc)
@@ -574,7 +575,7 @@ class Insurance:
         for num_key in ('premium', 'coverage', 'cash_value'):
             if num_key in safe_fields:
                 try:
-                    safe_fields[num_key] = float(safe_fields[num_key])
+                    safe_fields[num_key] = safe_float(safe_fields[num_key])
                 except (ValueError, TypeError):
                     pass
 

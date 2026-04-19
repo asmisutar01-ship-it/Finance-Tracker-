@@ -35,6 +35,10 @@ def create_app():
 
     return app
 
+# Initialize globally for Gunicorn
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True)
+    # Ensure port binding works correctly in various environments
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

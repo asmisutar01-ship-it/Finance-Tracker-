@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from flask_mail import Mail, Message
+from utils.helpers import safe_float
 from models import User, Expense, Income, Loan, Asset, Insurance, TaxProfile
 from utils.tax import calculate_tax
 from datetime import date
@@ -11,6 +12,14 @@ def get_mail():
     """Lazily import the mail object from app.py at request time."""
     from app import mail
     return mail
+
+
+@main.app_errorhandler(Exception)
+def handle_unexpected_error(e):
+    """Global error handler to prevent full app crashes in production."""
+    current_app.logger.error(f"Unhandled Exception: {e}")
+    flash("An unexpected error occurred while processing your request. Please try again later.", "error")
+    return redirect(url_for('main.login'))
 
 
 # ──────────────────────────────────────────────
@@ -335,9 +344,9 @@ def profile():
     user = User.get_by_email(email)
 
     if request.method == 'POST':
-        salary = float(request.form.get('salary', 0) or 0)
-        monthly_spend = float(request.form.get('monthly_spend', 0) or 0)
-        savings = float(request.form.get('savings', 0) or 0)
+        salary = safe_float(request.form.get('salary'))
+        monthly_spend = safe_float(request.form.get('monthly_spend'))
+        savings = safe_float(request.form.get('savings'))
 
         User.update_financials(email, salary, monthly_spend, savings)
         flash('Financial details updated successfully.', 'success')
@@ -465,7 +474,7 @@ def add_loan():
         return redirect(url_for('main.loans'))
         
     try:
-        Loan.add_loan(email, name, float(principal_amount), float(interest_rate), int(tenure_months))
+        Loan.add_loan(email, name, safe_float(principal_amount), safe_float(interest_rate), int(tenure_months))
         flash('Loan added successfully.', 'success')
     except Exception as e:
         flash(f'Error adding loan: {e}', 'error')
@@ -505,11 +514,7 @@ def add_expense():
         flash('All expense fields are required.', 'error')
         return redirect(url_for('main.profile'))
 
-    try:
-        amount = float(amount)
-    except ValueError:
-        flash('Amount must be a valid number.', 'error')
-        return redirect(url_for('main.profile'))
+    amount = safe_float(amount)
 
     Expense.add_expense(session['user_email'], amount, category, date_str)
     flash('Expense added successfully.', 'success')
@@ -543,11 +548,7 @@ def add_income():
         flash('All income fields are required.', 'error')
         return redirect(url_for('main.profile'))
 
-    try:
-        amount = float(amount)
-    except ValueError:
-        flash('Amount must be a valid number.', 'error')
-        return redirect(url_for('main.profile'))
+    amount = safe_float(amount)
 
     Income.add_income(session['user_email'], amount, source, date_str)
     flash('Income added successfully.', 'success')
