@@ -28,8 +28,9 @@ def create_app():
 
     # Initialize extensions
     mail.init_app(app)
+    app.db = None
     with app.app_context():
-        init_db()
+        app.db = init_db()
 
     # Register blueprints
     app.register_blueprint(main_blueprint)

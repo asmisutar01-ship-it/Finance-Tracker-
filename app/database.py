@@ -2,11 +2,9 @@ import os
 import logging
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
-
-db = None
+from flask import current_app
 
 def init_db(app=None):
-    global db
     mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/financetrack")
     try:
         client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
@@ -14,14 +12,16 @@ def init_db(app=None):
         client.server_info()
         db = client['financetrack']
         logging.info("MongoDB connected successfully.")
+        return db
     except ServerSelectionTimeoutError as err:
         logging.error(f"MongoDB connection failed: {err}")
-        db = None
+        return None
     except Exception as e:
         logging.error(f"An error occurred while connecting to MongoDB: {e}")
-        db = None
+        return None
     
 def get_db():
+    db = getattr(current_app, 'db', None)
     if db is None:
         raise Exception("Database connection is not initialized.")
     return db
