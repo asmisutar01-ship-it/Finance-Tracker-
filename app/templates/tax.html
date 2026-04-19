@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in-up">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-card p-6 rounded-2xl border border-surface-border shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-content tracking-tight">Tax Calculator (FY 25-26)</h1>
+                <p class="text-sm text-content-muted mt-1">Estimate your tax liability and compare regimes</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left Column: Input Form -->
+        <div class="lg:col-span-2 space-y-6">
+            <form id="tax-form" action="{{ url_for('main.tax_calculator') }}" method="POST" class="space-y-6">
+                <!-- 1. Income Details -->
+                <div class="bg-surface-card border border-surface-border rounded-2xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-content mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-semantic-emerald" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Income Details
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Annual Salary</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                <input type="number" name="salary" min="0" required value="{{ data.get('salary', '') if data else '' }}" class="w-full pl-8 pr-4 py-2.5 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Other Income</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                <input type="number" name="other_income" min="0" value="{{ data.get('other_income', '') if data else '' }}" class="w-full pl-8 pr-4 py-2.5 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Deductions -->
+                <div class="bg-surface-card border border-surface-border rounded-2xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-content mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-semantic-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                        Standard Deductions
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="group relative">
+                            <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Section 80C</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                <input type="number" name="section_80C" min="0" value="{{ data.get('deductions', {}).get('section_80C', '') if data and 'deductions' in data else data.get('section_80C', '') if data else '' }}" class="w-full pl-8 pr-4 py-2.5 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                            </div>
+                            <div class="hidden group-hover:block absolute z-10 w-48 p-2 mt-1 text-xs text-white bg-gray-800 rounded-lg">Max ₹1,50,000. Includes PPF, ELSS, EPF, etc. Life insurance is added automatically.</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">HRA Exemption</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                <input type="number" name="hra" min="0" value="{{ data.get('deductions', {}).get('hra', '') if data and 'deductions' in data else data.get('hra', '') if data else '' }}" class="w-full pl-8 pr-4 py-2.5 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Home Loan Interest</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                <input type="number" name="home_loan_interest" min="0" value="{{ data.get('deductions', {}).get('home_loan_interest', '') if data and 'deductions' in data else data.get('home_loan_interest', '') if data else '' }}" class="w-full pl-8 pr-4 py-2.5 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                            </div>
+                            {% if detected_home_loan_interest and detected_home_loan_interest > 0 %}
+                            <div class="mt-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                                <p class="text-xs font-semibold text-primary mb-2 flex items-center gap-1.5">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Detected Home Loan Interest: ₹{{ "{:,.0f}".format(detected_home_loan_interest) }}
+                                </p>
+                                <label class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox" name="use_auto_loan" class="w-3.5 h-3.5 rounded border-surface-border text-primary focus:ring-primary/40 bg-surface-input" checked>
+                                    <span class="text-xs font-medium text-content-muted group-hover:text-content transition-colors">Use auto-detected loan interest</span>
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Insurance Deductions (80D & 80C Life) -->
+                <div class="bg-surface-card border border-surface-border rounded-2xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-content flex items-center gap-2">
+                            <svg class="w-5 h-5 text-semantic-emerald" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                            Insurance Benefits
+                        </h2>
+                        <span class="text-xs text-primary bg-primary/10 px-2 py-1 rounded-md font-medium">Smart Integration</span>
+                    </div>
+
+                    {% set ins = data.get('insurance_details', {}) if data else {} %}
+                    
+                    <!-- Health Insurance (80D) -->
+                    <div class="mb-5 border border-surface-border rounded-xl p-4 bg-surface-base/50">
+                        <label class="flex items-center gap-3 cursor-pointer mb-4">
+                            <input type="checkbox" name="has_health_insurance" id="has_health" class="w-4 h-4 rounded border-surface-border text-primary focus:ring-primary/40 bg-surface-input" 
+                                   {% if ins.get('has_health_insurance') %}checked{% endif %} onchange="toggleSection('health_section', this.checked)">
+                            <span class="font-medium text-content">I have Health Insurance (Section 80D)</span>
+                        </label>
+                        
+                        <div id="health_section" class="space-y-4 {% if not ins.get('has_health_insurance') %}hidden{% endif %} pl-7 border-l-2 border-surface-border ml-2">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5 group relative cursor-help">
+                                        Premium (Self/Family) <span class="text-primary ml-1">ⓘ</span>
+                                        <div class="hidden group-hover:block absolute z-10 w-48 p-2 mt-1 text-xs text-white bg-gray-800 rounded-lg font-normal normal-case">80D allows up to ₹25,000 deduction for self & family.</div>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                        <input type="number" name="health_premium_self" min="0" value="{{ ins.get('health_premium_self', '') }}" class="w-full pl-8 pr-4 py-2 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5 group relative cursor-help">
+                                        Premium (Parents) <span class="text-primary ml-1">ⓘ</span>
+                                        <div class="hidden group-hover:block absolute z-10 w-48 p-2 mt-1 text-xs text-white bg-gray-800 rounded-lg font-normal normal-case">Additional ₹25,000 deduction (₹50,000 if senior citizens).</div>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                        <input type="number" name="health_premium_parents" min="0" value="{{ ins.get('health_premium_parents', '') }}" class="w-full pl-8 pr-4 py-2 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                                    </div>
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer mt-2 text-sm text-content-muted hover:text-content">
+                                <input type="checkbox" name="parents_senior" class="w-3.5 h-3.5 rounded border-surface-border text-primary focus:ring-primary/40 bg-surface-input" {% if ins.get('parents_senior') %}checked{% endif %}>
+                                Parents are Senior Citizens (60+ years)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Life Insurance (80C) -->
+                    <div class="border border-surface-border rounded-xl p-4 bg-surface-base/50">
+                        <label class="flex items-center gap-3 cursor-pointer mb-4">
+                            <input type="checkbox" name="has_life_insurance" id="has_life" class="w-4 h-4 rounded border-surface-border text-primary focus:ring-primary/40 bg-surface-input"
+                                   {% if ins.get('has_life_insurance') %}checked{% endif %} onchange="toggleSection('life_section', this.checked)">
+                            <span class="font-medium text-content">I have Life Insurance (Section 80C)</span>
+                        </label>
+                        
+                        <div id="life_section" class="{% if not ins.get('has_life_insurance') %}hidden{% endif %} pl-7 border-l-2 border-surface-border ml-2">
+                            <div class="max-w-xs">
+                                <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5 group relative cursor-help">
+                                    Annual Premium <span class="text-primary ml-1">ⓘ</span>
+                                    <div class="hidden group-hover:block absolute z-10 w-48 p-2 mt-1 text-xs text-white bg-gray-800 rounded-lg font-normal normal-case">Life insurance premium is added to 80C limit (Total max ₹1,50,000).</div>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">₹</span>
+                                    <input type="number" name="life_premium" min="0" value="{{ ins.get('life_premium', '') }}" class="w-full pl-8 pr-4 py-2 text-sm bg-surface-input border border-surface-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-content transition-all" placeholder="Enter amount (₹)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="py-3 px-6 bg-primary text-white text-sm font-semibold rounded-xl shadow-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-all flex items-center gap-2">
+                        Calculate Tax
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Column: Results -->
+        <div class="space-y-6">
+            {% if results %}
+            <div class="bg-surface-card border border-surface-border rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
+                <!-- Winner Banner -->
+                <div class="bg-gradient-to-r {% if results.suggested_regime == 'old' %}from-semantic-emeraldLight to-semantic-emerald/20 text-semantic-emeraldText border-b border-semantic-emerald/30{% else %}from-primary-light/20 to-primary/10 text-primary border-b border-primary/20{% endif %} p-5 text-center">
+                    <span class="text-xs font-bold uppercase tracking-wider mb-1 block">Recommended Regime</span>
+                    <h3 class="text-2xl font-extrabold">{{ 'Old Regime' if results.suggested_regime == 'old' else 'New Regime' }}</h3>
+                    <p class="text-sm mt-1 font-medium">You save ₹{{ "{:,.2f}".format(results.savings) }}</p>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <!-- Old Regime Card -->
+                    <div class="p-4 rounded-xl {% if results.suggested_regime == 'old' %}bg-surface-base border-2 border-semantic-emerald shadow-sm{% else %}bg-surface border border-surface-border opacity-70{% endif %}">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-content">Old Regime</h4>
+                            <span class="text-xs font-semibold text-content-muted">Tax</span>
+                        </div>
+                        <div class="flex justify-between items-end mb-4">
+                            <div>
+                                <p class="text-xs text-content-muted">Taxable Income</p>
+                                <p class="font-medium text-content">₹{{ "{:,.0f}".format(results.old_regime.taxable_income) }}</p>
+                            </div>
+                            <p class="text-xl font-bold {% if results.suggested_regime == 'old' %}text-semantic-emeraldText{% else %}text-content{% endif %}">
+                                ₹{{ "{:,.0f}".format(results.old_regime.tax) }}
+                            </p>
+                        </div>
+                        
+                        <!-- Breakdown -->
+                        <div class="pt-3 border-t border-surface-border/60">
+                            <p class="text-xs font-semibold text-content-muted uppercase tracking-wider mb-2">Deductions Applied: ₹{{ "{:,.0f}".format(results.old_regime.deductions) }}</p>
+                            <ul class="text-sm space-y-1">
+                                <li class="flex justify-between"><span class="text-content-muted">Standard</span><span class="text-content">₹{{ "{:,.0f}".format(results.old_regime.deduction_breakdown.standard) }}</span></li>
+                                {% if results.old_regime.deduction_breakdown.section_80c > 0 %}
+                                <li class="flex justify-between"><span class="text-content-muted">80C (incl. Life)</span><span class="text-content">₹{{ "{:,.0f}".format(results.old_regime.deduction_breakdown.section_80c) }}</span></li>
+                                {% endif %}
+                                {% if results.old_regime.deduction_breakdown.section_80d > 0 %}
+                                <li class="flex justify-between"><span class="text-content-muted">80D (Health)</span><span class="text-content">₹{{ "{:,.0f}".format(results.old_regime.deduction_breakdown.section_80d) }}</span></li>
+                                {% endif %}
+                                {% if results.old_regime.deduction_breakdown.home_loan_interest > 0 %}
+                                <li class="flex justify-between"><span class="text-content-muted">Home Loan Int.</span><span class="text-content">₹{{ "{:,.0f}".format(results.old_regime.deduction_breakdown.home_loan_interest) }}</span></li>
+                                {% endif %}
+                                {% if results.old_regime.deduction_breakdown.hra > 0 %}
+                                <li class="flex justify-between"><span class="text-content-muted">HRA Exemption</span><span class="text-content">₹{{ "{:,.0f}".format(results.old_regime.deduction_breakdown.hra) }}</span></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- New Regime Card -->
+                    <div class="p-4 rounded-xl {% if results.suggested_regime == 'new' %}bg-surface-base border-2 border-primary shadow-sm{% else %}bg-surface border border-surface-border opacity-70{% endif %}">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-content">New Regime</h4>
+                            <span class="text-xs font-semibold text-content-muted">Tax</span>
+                        </div>
+                        <div class="flex justify-between items-end mb-4">
+                            <div>
+                                <p class="text-xs text-content-muted">Taxable Income</p>
+                                <p class="font-medium text-content">₹{{ "{:,.0f}".format(results.new_regime.taxable_income) }}</p>
+                            </div>
+                            <p class="text-xl font-bold {% if results.suggested_regime == 'new' %}text-primary{% else %}text-content{% endif %}">
+                                ₹{{ "{:,.0f}".format(results.new_regime.tax) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-surface border border-surface-border border-dashed rounded-2xl h-full min-h-[300px] flex flex-col items-center justify-center p-8 text-center text-content-muted">
+                <div class="w-16 h-16 bg-surface-card rounded-full flex items-center justify-center mb-4 shadow-sm border border-surface-border">
+                    <svg class="w-8 h-8 text-content-muted/50" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                </div>
+                <p class="font-medium text-content">No Calculation Yet</p>
+                <p class="text-sm mt-1">Fill out your income and deductions to see your tax breakdown.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleSection(sectionId, show) {
+        const el = document.getElementById(sectionId);
+        if (show) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+            // Clear inputs when hidden
+            el.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+            el.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
+        }
+    }
+</script>
+{% endblock %}

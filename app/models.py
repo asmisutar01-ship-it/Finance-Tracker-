@@ -1,7 +1,10 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import get_db
 from bson.objectid import ObjectId
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
+import string
+
 
 class User:
     @staticmethod
@@ -18,7 +21,10 @@ class User:
             "company": "",
             "salary": 0,
             "monthly_spend": 0,
-            "savings": 0
+            "savings": 0,
+            "is_verified": False,   # must verify via OTP
+            "otp": None,
+            "otp_expiry": None
         }
         db.users.insert_one(user_doc)
         return user_doc
@@ -31,6 +37,43 @@ class User:
     @staticmethod
     def verify_password(stored_password_hash, provided_password):
         return check_password_hash(stored_password_hash, provided_password)
+
+    @staticmethod
+    def generate_and_store_otp(email):
+        """Create a 6-digit OTP, store it hashed in DB, return plaintext OTP."""
+        db = get_db()
+        otp_plain = ''.join(random.choices(string.digits, k=6))
+        otp_hash  = generate_password_hash(otp_plain)
+        expiry    = datetime.utcnow() + timedelta(minutes=5)
+        db.users.update_one(
+            {"email": email.lower()},
+            {"$set": {"otp": otp_hash, "otp_expiry": expiry}}
+        )
+        return otp_plain
+
+    @staticmethod
+    def verify_otp(email, otp_provided):
+        """Returns (True, '') on success or (False, reason) on failure."""
+        db = get_db()
+        user = db.users.find_one({"email": email.lower()})
+        if not user:
+            return False, "User not found."
+        if user.get("is_verified"):
+            return True, "already_verified"
+        if not user.get("otp") or not user.get("otp_expiry"):
+            return False, "No OTP found. Please request a new one."
+        if datetime.utcnow() > user["otp_expiry"]:
+            return False, "OTP has expired. Please request a new one."
+        if not check_password_hash(user["otp"], otp_provided.strip()):
+            return False, "Incorrect OTP. Please try again."
+        # Mark verified and clear OTP
+        db.users.update_one(
+            {"email": email.lower()},
+            {"$set": {"is_verified": True, "otp": None, "otp_expiry": None}}
+        )
+        return True, "verified"
+
+
 
     @staticmethod
     def update_profile(email, name, age, education, job_title, company):
@@ -68,6 +111,15 @@ class User:
             {"$set": {"password": generate_password_hash(new_password)}}
         )
         return True, "Password changed successfully."
+
+    @staticmethod
+    def force_reset_password(email, new_password):
+        db = get_db()
+        db.users.update_one(
+            {"email": email.lower()},
+            {"$set": {"password": generate_password_hash(new_password)}}
+        )
+        return True, "Password reset successfully."
 
     @staticmethod
     def update_financials(email, salary, monthly_spend, savings):
@@ -601,5 +653,43 @@ class Insurance:
             {"_id": policy_id},
             {"$set": {"next_due_date": next_due}}
         )
-        
         return True, "Premium paid and next due date advanced!"
+
+class TaxProfile:
+    @staticmethod
+    def save_profile(user_email, data):
+        db = get_db()
+        from utils.helpers import safe_float
+        # remove anything we don't want to store directly if necessary
+        doc = {
+            "user_email": user_email.lower(),
+            "financial_year": data.get("financial_year", "2025-26"),
+            "salary": safe_float(data.get("salary")),
+            "other_income": safe_float(data.get("other_income")),
+            "deductions": {
+                "section_80C": safe_float(data.get("section_80C")),
+                "home_loan_interest": safe_float(data.get("home_loan_interest")),
+                "hra": safe_float(data.get("hra"))
+            },
+            "insurance_details": {
+                "has_health_insurance": data.get("has_health_insurance") == 'on',
+                "has_life_insurance": data.get("has_life_insurance") == 'on',
+                "health_premium_self": safe_float(data.get("health_premium_self")),
+                "health_premium_parents": safe_float(data.get("health_premium_parents")),
+                "parents_senior": data.get("parents_senior") == 'on',
+                "life_premium": safe_float(data.get("life_premium"))
+            },
+            "created_at": datetime.utcnow()
+        }
+        
+        db.tax_profiles.update_one(
+            {"user_email": user_email.lower(), "financial_year": doc["financial_year"]},
+            {"$set": doc},
+            upsert=True
+        )
+        return True
+
+    @staticmethod
+    def get_profile(user_email, financial_year="2025-26"):
+        db = get_db()
+        return db.tax_profiles.find_one({"user_email": user_email.lower(), "financial_year": financial_year})

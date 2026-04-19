@@ -1,9 +1,16 @@
 from functools import wraps
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from models import User, Expense, Income, Loan, Asset, Insurance
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
+from flask_mail import Mail, Message
+from models import User, Expense, Income, Loan, Asset, Insurance, TaxProfile
+from utils.tax import calculate_tax
 from datetime import date
 
 main = Blueprint('main', __name__)
+
+def get_mail():
+    """Lazily import the mail object from app.py at request time."""
+    from app import mail
+    return mail
 
 
 # ──────────────────────────────────────────────
@@ -33,52 +40,117 @@ def index():
 @main.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
+        name     = request.form.get('name', '').strip()
+        email    = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
 
-        # Basic validation
         if not name or not email or not password:
             flash('All fields are required.', 'error')
             return redirect(url_for('main.signup'))
 
-        # Check if user exists
-        if User.get_by_email(email):
-            flash('Email already exists.', 'error')
-            return redirect(url_for('main.signup'))
+        existing = User.get_by_email(email)
+        if existing:
+            if not existing.get('is_verified'):
+                # Resend OTP for incomplete signup
+                otp = User.generate_and_store_otp(email)
+                _send_otp_email(email, name, otp)
+                session['otp_email'] = email
+                flash('Account exists but is unverified. A new OTP has been sent.', 'warning')
+                return redirect(url_for('main.verify_otp'))
+            flash('Email already registered. Please log in.', 'error')
+            return redirect(url_for('main.login'))
 
-        # Create user
+        # Create user (is_verified=False)
         User.create_user(name, email, password)
-        session['signup_email'] = email
-        return redirect(url_for('main.verify_email'))
+
+        # Generate + send OTP
+        otp = User.generate_and_store_otp(email)
+        _send_otp_email(email, name, otp)
+
+        session['otp_email'] = email
+        flash('Account created! Check your email for the 6-digit OTP.', 'success')
+        return redirect(url_for('main.verify_otp'))
 
     return render_template('signup.html')
 
 
-@main.route('/verify-email')
-def verify_email():
-    email = session.get('signup_email')
+def _send_otp_email(email, name, otp):
+    """Send OTP email – silently fails if mail not configured."""
+    try:
+        mail = get_mail()
+        msg = Message(
+            subject='Your FinanceTracker Verification Code',
+            recipients=[email]
+        )
+        msg.html = f"""<div style='font-family:sans-serif;max-width:480px;margin:0 auto'>
+            <h2 style='color:#4f46e5'>FinanceTracker Pro</h2>
+            <p>Hi <strong>{name}</strong>,</p>
+            <p>Your verification code is:</p>
+            <div style='font-size:36px;font-weight:bold;letter-spacing:8px;color:#4f46e5;padding:16px;background:#f0f0ff;border-radius:8px;text-align:center'>{otp}</div>
+            <p style='color:#6b7280;font-size:13px'>This code expires in <strong>5 minutes</strong>. Do not share it with anyone.</p>
+        </div>"""
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.warning(f'OTP email failed: {e}')
+
+
+@main.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    email = session.get('otp_email')
+    if not email:
+        flash('Session expired. Please sign up again.', 'error')
+        return redirect(url_for('main.signup'))
+
+    if request.method == 'POST':
+        digits = [request.form.get(f'd{i}', '') for i in range(1, 7)]
+        otp_entered = ''.join(digits).strip()
+
+        success, msg = User.verify_otp(email, otp_entered)
+        if success:
+            session.pop('otp_email', None)
+            flash('Email verified! You can now log in.', 'success')
+            return redirect(url_for('main.login'))
+        else:
+            flash(msg, 'error')
+            return redirect(url_for('main.verify_otp'))
+
+    return render_template('verify_otp.html', email=email)
+
+
+@main.route('/resend-otp')
+def resend_otp():
+    email = session.get('otp_email')
     if not email:
         return redirect(url_for('main.signup'))
-    return render_template('verify_email.html', email=email)
+    user = User.get_by_email(email)
+    if not user:
+        return redirect(url_for('main.signup'))
+    otp = User.generate_and_store_otp(email)
+    _send_otp_email(email, user.get('name', ''), otp)
+    flash('A new OTP has been sent to your email.', 'success')
+    return redirect(url_for('main.verify_otp'))
 
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email    = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
 
         user = User.get_by_email(email)
 
-        # Check password
         if not user or not User.verify_password(user['password'], password):
             flash('Please check your login details and try again.', 'error')
             return redirect(url_for('main.login'))
 
-        # Login success
+        # Block unverified accounts
+        if not user.get('is_verified', False):
+            session['otp_email'] = user['email']
+            flash('Please verify your email before logging in.', 'warning')
+            return redirect(url_for('main.verify_otp'))
+
         session['user_email'] = user['email']
-        session['user_name'] = user['name']
+        session['user_name']  = user['name']
         return redirect(url_for('main.profile'))
 
     return render_template('login.html')
@@ -90,6 +162,100 @@ def logout():
     session.pop('user_name', None)
     session.pop('signup_email', None)
     return redirect(url_for('main.login'))
+
+
+@main.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        if not email:
+            flash('Email is required.', 'error')
+            return redirect(url_for('main.forgot_password'))
+
+        user = User.get_by_email(email)
+        if not user:
+            # Silently fail for security, but act like we sent it
+            flash('If an account exists for that email, an OTP has been sent.', 'success')
+            return redirect(url_for('main.login'))
+
+        # Generate + send OTP
+        otp = User.generate_and_store_otp(email)
+        _send_otp_email(email, user.get('name', 'User'), otp)
+
+        session['reset_email'] = email
+        flash('Check your email for the 6-digit OTP to reset your password.', 'success')
+        return redirect(url_for('main.verify_reset_otp'))
+
+    return render_template('forgot_password.html')
+
+
+@main.route('/verify_reset_otp', methods=['GET', 'POST'])
+def verify_reset_otp():
+    email = session.get('reset_email')
+    if not email:
+        flash('Session expired. Please restart the password reset process.', 'error')
+        return redirect(url_for('main.forgot_password'))
+
+    if request.method == 'POST':
+        digits = [request.form.get(f'd{i}', '') for i in range(1, 7)]
+        otp_entered = ''.join(digits).strip()
+
+        success, msg = User.verify_otp(email, otp_entered)
+        if success:
+            session['reset_authorized'] = True
+            flash('Email verified! You can now reset your password.', 'success')
+            return redirect(url_for('main.reset_password'))
+        else:
+            flash(msg, 'error')
+            return redirect(url_for('main.verify_reset_otp'))
+
+    return render_template('verify_reset_otp.html', email=email)
+
+
+@main.route('/resend_reset_otp')
+def resend_reset_otp():
+    email = session.get('reset_email')
+    if not email:
+        return redirect(url_for('main.forgot_password'))
+    user = User.get_by_email(email)
+    if not user:
+        return redirect(url_for('main.forgot_password'))
+    otp = User.generate_and_store_otp(email)
+    _send_otp_email(email, user.get('name', ''), otp)
+    flash('A new OTP has been sent to your email.', 'success')
+    return redirect(url_for('main.verify_reset_otp'))
+
+
+@main.route('/reset_password', methods=['GET', 'POST'])
+def reset_password():
+    email = session.get('reset_email')
+    if not email or not session.get('reset_authorized'):
+        flash('Unauthorized or session expired.', 'error')
+        return redirect(url_for('main.forgot_password'))
+
+    if request.method == 'POST':
+        new_pw = request.form.get('new_password', '')
+        confirm_pw = request.form.get('confirm_password', '')
+
+        if new_pw != confirm_pw:
+            flash('Passwords do not match.', 'error')
+            return redirect(url_for('main.reset_password'))
+
+        if len(new_pw) < 6:
+            flash('Password must be at least 6 characters.', 'error')
+            return redirect(url_for('main.reset_password'))
+
+        success, msg = User.force_reset_password(email, new_pw)
+        if success:
+            session.pop('reset_email', None)
+            session.pop('reset_authorized', None)
+            flash('Password has been reset successfully. You can now log in.', 'success')
+            return redirect(url_for('main.login'))
+        else:
+            flash(msg, 'error')
+            return redirect(url_for('main.reset_password'))
+
+    return render_template('reset_password.html')
 
 
 @main.route('/edit_profile', methods=['POST'])
@@ -537,3 +703,82 @@ def edit_insurance(policy_id):
         flash(f'Error updating policy: {str(e)}', 'error')
 
     return redirect(url_for('main.insurance'))
+
+
+# ──────────────────────────────────────────────
+# Tax Calculator Routes
+# ──────────────────────────────────────────────
+
+@main.route('/tax', methods=['GET', 'POST'])
+@login_required
+def tax_calculator():
+    email = session['user_email']
+    user = User.get_by_email(email)
+    
+    # ── Smart Loan Interest Detection ──
+    # Fetch all loans for the user and filter for 'home' or related terms
+    total_home_loan_interest = 0
+    user_loans = Loan.get_all(email)
+    for loan in user_loans:
+        name = loan.get("name", "").lower()
+        if "home" in name or "house" in name or "housing" in name:
+            # Approximate yearly interest if interest_paid_yearly is not stored
+            # (remaining_balance * interest_rate / 100)
+            yearly_interest = loan.get("interest_paid_yearly", loan.get("remaining_balance", 0) * (loan.get("interest_rate", 0) / 100))
+            total_home_loan_interest += yearly_interest
+            
+    if request.method == 'POST':
+        # Get data from form and calculate
+        form_data = request.form.to_dict()
+        
+        # Determine final home loan interest based on manual vs auto toggle
+        from utils.helpers import safe_float
+        manual_interest = safe_float(form_data.get('home_loan_interest'))
+        use_auto_loan = form_data.get('use_auto_loan') == 'on'
+        
+        if use_auto_loan:
+            final_home_loan_interest = max(manual_interest, total_home_loan_interest)
+        else:
+            final_home_loan_interest = manual_interest
+            
+        form_data['home_loan_interest'] = final_home_loan_interest
+        
+        # Calculate tax
+        tax_results = calculate_tax(form_data)
+        
+        # Save profile
+        TaxProfile.save_profile(email, form_data)
+        
+        # Rerender with results
+        return render_template('tax.html', user=user, data=form_data, results=tax_results, detected_home_loan_interest=total_home_loan_interest)
+        
+    else:
+        # GET request
+        # Fetch existing profile if any
+        existing_profile = TaxProfile.get_profile(email, "2025-26")
+        
+        # Smart UX: Fetch insurance premiums if not already in profile
+        total_life_premium = 0
+        total_health_premium_self = 0
+        
+        if not existing_profile:
+            policies = Insurance.get_all(email)
+            for policy in policies:
+                p_type = policy.get('policy_type', '').lower()
+                premium = policy.get('premium', 0)
+                if 'life' in p_type:
+                    total_life_premium += premium
+                elif 'health' in p_type or 'medical' in p_type:
+                    total_health_premium_self += premium
+                    
+            existing_profile = {
+                "salary": user.get('salary', 0),
+                "insurance_details": {
+                    "has_life_insurance": total_life_premium > 0,
+                    "has_health_insurance": total_health_premium_self > 0,
+                    "life_premium": total_life_premium,
+                    "health_premium_self": total_health_premium_self
+                }
+            }
+
+        return render_template('tax.html', user=user, data=existing_profile, results=None, detected_home_loan_interest=total_home_loan_interest)

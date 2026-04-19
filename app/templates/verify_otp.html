@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center">
+<div class="w-full max-w-md animate-fade-in-up">
+
+    <!-- Card -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl shadow-xl overflow-hidden">
+
+        <!-- Header -->
+        <div class="px-8 pt-8 pb-6 text-center">
+            <!-- Shield icon -->
+            <div class="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-content tracking-tight">Verify Your Email</h1>
+            <p class="text-sm text-content-muted mt-2">
+                We sent a 6-digit code to<br>
+                <span class="font-semibold text-primary">{{ email }}</span>
+            </p>
+        </div>
+
+        <!-- OTP Form -->
+        <form method="POST" action="{{ url_for('main.verify_otp') }}" class="px-8 pb-8 space-y-6" id="otp-form">
+            <!-- Six individual digit boxes -->
+            <div class="flex justify-center gap-3" id="otp-boxes">
+                {% for i in range(1, 7) %}
+                <input
+                    type="text"
+                    name="d{{ i }}"
+                    id="d{{ i }}"
+                    maxlength="1"
+                    inputmode="numeric"
+                    pattern="[0-9]"
+                    autocomplete="one-time-code"
+                    class="w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 border-surface-border bg-surface-input text-content
+                           focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all
+                           otp-digit"
+                    {% if i == 1 %}autofocus{% endif %}
+                >
+                {% endfor %}
+            </div>
+
+            <!-- Timer -->
+            <div class="text-center">
+                <p class="text-xs text-content-muted" id="timer-text">
+                    Code expires in <span id="countdown" class="font-semibold text-primary">5:00</span>
+                </p>
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/40">
+                Verify Code
+            </button>
+
+            <div class="text-center text-sm text-content-muted">
+                Didn't receive it?
+                <a href="{{ url_for('main.resend_otp') }}"
+                   class="font-semibold text-primary hover:text-primary-hover transition-colors ml-1">
+                    Resend OTP
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+</div>
+
+<script>
+// ── Auto-advance between boxes ──
+const inputs = document.querySelectorAll('.otp-digit');
+
+inputs.forEach((input, idx) => {
+    input.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/\D/g, '');
+        e.target.value = val.slice(-1);   // keep only last digit
+        if (val && idx < inputs.length - 1) inputs[idx + 1].focus();
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+            inputs[idx - 1].focus();
+        }
+    });
+    input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+        text.split('').slice(0, 6).forEach((ch, i) => {
+            if (inputs[i]) inputs[i].value = ch;
+        });
+        const last = Math.min(text.length, 5);
+        inputs[last].focus();
+    });
+});
+
+// ── 5-minute countdown ──
+let totalSeconds = 5 * 60;
+const countdownEl = document.getElementById('countdown');
+const timerText   = document.getElementById('timer-text');
+
+const tick = setInterval(() => {
+    totalSeconds--;
+    if (totalSeconds <= 0) {
+        clearInterval(tick);
+        countdownEl.textContent = 'expired';
+        timerText.innerHTML = '<span class="text-semantic-redText font-semibold">Code expired. Please resend.</span>';
+        return;
+    }
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    countdownEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    if (totalSeconds <= 60) countdownEl.classList.add('text-semantic-redText');
+}, 1000);
+</script>
+{% endblock %}
