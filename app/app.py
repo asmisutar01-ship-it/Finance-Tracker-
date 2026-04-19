@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from database import init_db
-from routes import main as main_blueprint
+from app.database import init_db
+from app.routes import main as main_blueprint
 
 # Global mail object – imported by routes
 mail = Mail()

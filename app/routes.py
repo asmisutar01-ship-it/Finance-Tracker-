@@ -1,16 +1,16 @@
 from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from flask_mail import Mail, Message
-from utils.helpers import safe_float
-from models import User, Expense, Income, Loan, Asset, Insurance, TaxProfile
-from utils.tax import calculate_tax
+from app.utils.helpers import safe_float
+from app.models import User, Expense, Income, Loan, Asset, Insurance, TaxProfile
+from app.utils.tax import calculate_tax
 from datetime import date
 
 main = Blueprint('main', __name__)
 
 def get_mail():
     """Lazily import the mail object from app.py at request time."""
-    from app import mail
+    from app.app import mail
     return mail
 
 
@@ -733,7 +733,7 @@ def tax_calculator():
         form_data = request.form.to_dict()
         
         # Determine final home loan interest based on manual vs auto toggle
-        from utils.helpers import safe_float
+        from app.utils.helpers import safe_float
         manual_interest = safe_float(form_data.get('home_loan_interest'))
         use_auto_loan = form_data.get('use_auto_loan') == 'on'
         

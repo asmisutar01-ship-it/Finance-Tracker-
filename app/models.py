@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import get_db
-from utils.helpers import safe_float
+from app.database import get_db
+from app.utils.helpers import safe_float
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import random
@@ -459,7 +459,7 @@ class Asset:
         
         # Globally pull Insurance cash value explicitly acting as pure hard assets
         try:
-            from models import Insurance
+            from app.models import Insurance
             total += safe_float(Insurance.get_total_cash_value(user_email))
         except:
             pass
@@ -509,7 +509,7 @@ class Asset:
         
         # Log to overarching balance
         if cash_received >= 0:
-            from models import Income
+            from app.models import Income
             Income.add_income(
                 user_email=user_email,
                 amount=cash_received,
@@ -517,7 +517,7 @@ class Asset:
                 date_str=sold_date
             )
         else:
-            from models import Expense
+            from app.models import Expense
             Expense.add_expense(
                 user_email=user_email,
                 amount=abs(cash_received),
@@ -546,7 +546,7 @@ class Insurance:
         res = db.insurances.insert_one(doc)
         
         # Add the first premium immediately to Expense history securely
-        from models import Expense
+        from app.models import Expense
         Expense.add_expense(
             user_email=user_email,
             amount=premium,
@@ -612,7 +612,7 @@ class Insurance:
             return False, "Policy not found."
             
         # Log the expense
-        from models import Expense
+        from app.models import Expense
         Expense.add_expense(
             user_email=user_email,
             amount=policy['premium'],
@@ -660,7 +660,7 @@ class TaxProfile:
     @staticmethod
     def save_profile(user_email, data):
         db = get_db()
-        from utils.helpers import safe_float
+        from app.utils.helpers import safe_float
         # remove anything we don't want to store directly if necessary
         doc = {
             "user_email": user_email.lower(),
