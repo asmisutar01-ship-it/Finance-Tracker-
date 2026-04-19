@@ -1,24 +1,10 @@
-import os
-from flask import Flask
-from flask_mail import Mail
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-from app.database import init_db
-from app.routes import main as main_blueprint
-
-# Global mail object – imported by routes
-mail = Mail()
-
 def create_app():
     app = Flask(__name__)
 
     # Core config
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-secret-key')
 
-    # Flask-Mail (Gmail SMTP)
+    # Flask-Mail config
     app.config['MAIL_SERVER']   = 'smtp.gmail.com'
     app.config['MAIL_PORT']     = 587
     app.config['MAIL_USE_TLS']  = True
@@ -28,19 +14,11 @@ def create_app():
 
     # Initialize extensions
     mail.init_app(app)
-    app.db = None
-    with app.app_context():
-        app.db = init_db()
+
+    # ✅ FIXED DATABASE INIT
+    init_db(app)
 
     # Register blueprints
     app.register_blueprint(main_blueprint)
 
     return app
-
-# Initialize globally for Gunicorn
-app = create_app()
-
-if __name__ == "__main__":
-    # Ensure port binding works correctly in various environments
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
