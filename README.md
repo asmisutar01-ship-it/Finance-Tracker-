@@ -1,103 +1,69 @@
-# 💰 Finance Tracker Web App
+# 💰 Finance Tracker
 
-A full-stack **personal finance management web application** built using Flask and MongoDB.
-Track your income, expenses, savings, loans, and assets — all in one place with a clean and user-friendly interface.
+A full-stack personal finance management web app built with Flask and MongoDB. This application helps users track expenses, manage income, calculate taxes, and securely handle authentication with OTP verification.
 
 ---
 
 ## 🚀 Features
 
-### 🔐 Authentication
+### 🔐 Authentication System
 
-* User Signup & Login system
-* Email verification (mock/extendable)
-* Secure password hashing
-* Session-based authentication
+* User signup & login
+* Email OTP verification (Flask-Mail)
+* Forgot password with OTP reset
+* Secure session handling
 
-### 👤 Profile Management
+### 📊 Finance Management
 
-* Store personal details (name, email, age, education, job, position)
-* Update credentials (email & password)
-* Clean and responsive UI
+* Add income & expenses
+* Categorize transactions
+* View financial summary
 
-### 💵 Financial Tracking
+### 🧮 Tax Calculator
 
-* Add & update:
+* Calculates tax based on user inputs
+* Supports:
 
-  * Salary
-  * Monthly Expenses
-  * Savings
-* Real-time financial summary
+  * Income
+  * Deductions
+  * Insurance (health/life)
+  * Loan interest (with smart input parsing)
 
-### 🏦 Loan Tracker
+### 🛠 Admin Dashboard (WIP)
 
-* Add loans with:
-
-  * Amount
-  * Interest rate
-  * Duration
-* Loan amount automatically considered in expenses
-
-### 🏠 Asset Management
-
-* Add assets by category:
-
-  * Property (Residential / Commercial / Farming Land)
-  * Vehicles
-  * Investments
-* Dynamic dropdowns based on category
-* Display assets as cards
-* Option to mark asset as **Sold**
-
-### 📊 Smart Dashboard (Upcoming / Expandable)
-
-* Expense breakdown
-* Savings insights
-* Asset vs Liability view
+* Planned interactive dashboard for admin-only access
 
 ---
 
-## 🛠️ Tech Stack
+## 🏗 Tech Stack
 
-**Frontend**
-
-* HTML
-* CSS
-* Bootstrap (optional)
-
-**Backend**
-
-* Python
-* Flask
-
-**Database**
-
-* MongoDB (PyMongo)
+* **Backend:** Flask (Python)
+* **Database:** MongoDB (PyMongo)
+* **Frontend:** HTML, CSS, Jinja2
+* **Email Service:** Flask-Mail
+* **Version Control:** Git & GitHub
 
 ---
 
 ## 📂 Project Structure
 
 ```
-finance-tracker/
-│── app.py
-│── routes/
-│── models/
-│── templates/
-│── static/
-│── .env
-│── .gitignore
-│── README.md
+app/
+ ├── app.py
+ ├── models.py
+ ├── routes.py
+ ├── utils/
+ │    ├── helpers.py
+ │    ├── tax.py
+ ├── templates/
+ │    ├── base.html
+ │    ├── login.html
+ │    ├── tax.html
+ │    ├── verify_otp.html
+ │    └── ...
 ```
 
-## 🤝 Contributing
-
-Contributions are welcome!
-Feel free to fork this repo and submit a pull request.
-
----
-
-## 📜 License
+## 📄 License
 
 This project is open-source and available under the MIT License.
 
@@ -105,8 +71,8 @@ This project is open-source and available under the MIT License.
 
 ## 👨‍💻 Author
 
-**Asmi A Sutar**
+**Asmi Sutar**
 
 ---
 
-⭐ If you like this project, don’t forget to star the repo!
+⭐ If you like this project, consider giving it a star!
