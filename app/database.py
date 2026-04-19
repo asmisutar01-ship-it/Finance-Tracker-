@@ -5,7 +5,7 @@ from pymongo.errors import ServerSelectionTimeoutError
 
 db = None
 
-def init_db(app):
+def init_db(app=None):
     global db
     mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/financetrack")
     try:
