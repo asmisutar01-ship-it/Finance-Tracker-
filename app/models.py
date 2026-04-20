@@ -1,6 +1,7 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.database import get_db
 from app.utils.helpers import safe_float
+from app.utils.currency import convert_to_inr, SUPPORTED as SUPPORTED_CURRENCIES
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import random
@@ -136,11 +137,20 @@ class User:
 
 class Expense:
     @staticmethod
-    def add_expense(user_email, amount, category, date_str):
+    def add_expense(user_email, amount, category, date_str, currency="INR"):
+        """Add an expense. Amount is stored in INR; original currency details are preserved."""
         db = get_db()
+        currency = (currency or "INR").upper().strip()
+        if currency not in SUPPORTED_CURRENCIES:
+            currency = "INR"
+        original_amount = safe_float(amount)
+        amount_inr = convert_to_inr(original_amount, currency)
         expense_doc = {
             "user_email": user_email.lower(),
-            "amount": safe_float(amount),
+            "amount": amount_inr,          # kept for backward-compat aggregations
+            "amount_inr": amount_inr,
+            "original_amount": original_amount,
+            "original_currency": currency,
             "category": category,
             "date": date_str
         }
@@ -213,11 +223,20 @@ class Expense:
 
 class Income:
     @staticmethod
-    def add_income(user_email, amount, source, date_str):
+    def add_income(user_email, amount, source, date_str, currency="INR"):
+        """Add an income entry. Amount is stored in INR; original currency details are preserved."""
         db = get_db()
+        currency = (currency or "INR").upper().strip()
+        if currency not in SUPPORTED_CURRENCIES:
+            currency = "INR"
+        original_amount = safe_float(amount)
+        amount_inr = convert_to_inr(original_amount, currency)
         income_doc = {
             "user_email": user_email.lower(),
-            "amount": safe_float(amount),
+            "amount": amount_inr,          # kept for backward-compat aggregations
+            "amount_inr": amount_inr,
+            "original_amount": original_amount,
+            "original_currency": currency,
             "source": source,
             "date": date_str
         }
@@ -280,18 +299,26 @@ class Loan:
         return emi
 
     @staticmethod
-    def add_loan(user_email, name, principal, annual_rate, tenure_months):
+    def add_loan(user_email, name, principal, annual_rate, tenure_months, currency="INR"):
+        """Add a loan. Principal is converted to INR before EMI calculation and storage."""
         db = get_db()
-        emi = Loan.calculate_emi(principal, annual_rate, tenure_months)
-        
+        currency = (currency or "INR").upper().strip()
+        if currency not in SUPPORTED_CURRENCIES:
+            currency = "INR"
+        original_principal = safe_float(principal)
+        principal_inr = convert_to_inr(original_principal, currency)
+        emi = Loan.calculate_emi(principal_inr, annual_rate, tenure_months)
+
         loan_doc = {
             "user_email": user_email.lower(),
             "name": name,
-            "principal_amount": safe_float(principal),
+            "principal_amount": principal_inr,
+            "original_principal": original_principal,
+            "original_currency": currency,
             "interest_rate": safe_float(annual_rate),
             "tenure_months": int(tenure_months),
             "emi": safe_float(emi),
-            "remaining_balance": safe_float(principal),
+            "remaining_balance": principal_inr,
             "created_at": datetime.utcnow()
         }
         result = db.loans.insert_one(loan_doc)
@@ -374,14 +401,26 @@ class LoanPayment:
 class Asset:
     @staticmethod
     def add_asset(user_email, category, value, **kwargs):
+        """Add an asset. Value is converted to INR before storage.
+        Pass currency='USD' (etc.) inside kwargs; it will be extracted before storing.
+        """
         db = get_db()
+        # Extract currency before passing remaining kwargs to asset_doc
+        currency = (kwargs.pop('currency', 'INR') or 'INR').upper().strip()
+        if currency not in SUPPORTED_CURRENCIES:
+            currency = 'INR'
+        original_value = safe_float(value)
+        value_inr = convert_to_inr(original_value, currency)
+
         asset_doc = {
             "user_email": user_email.lower(),
             "category": category,
-            "value": safe_float(value),
+            "value": value_inr,
+            "original_value": original_value,
+            "original_currency": currency,
             "created_at": datetime.utcnow()
         }
-        
+
         # Link a loan if requested
         linked_loan_id = kwargs.pop('linked_loan_id', None)
         if linked_loan_id:
@@ -389,7 +428,7 @@ class Asset:
 
         # Ingest dynamic arbitrary kwargs depending on asset category
         asset_doc.update(kwargs)
-        
+
         result = db.assets.insert_one(asset_doc)
         asset_doc['_id'] = result.inserted_id
         return asset_doc
@@ -529,29 +568,42 @@ class Asset:
 
 class Insurance:
     @staticmethod
-    def add_policy(user_email, policy_type, provider, premium, coverage, next_due_date, billing_cycle, has_cash_value, cash_value=0.0):
+    def add_policy(user_email, policy_type, provider, premium, coverage, next_due_date, billing_cycle, has_cash_value, cash_value=0.0, currency="INR"):
+        """Add an insurance policy. Premium, coverage and cash_value are converted to INR."""
         db = get_db()
+        currency = (currency or "INR").upper().strip()
+        if currency not in SUPPORTED_CURRENCIES:
+            currency = "INR"
+        has_cv = str(has_cash_value).lower() in ["true", "1", "yes", "on"]
+        original_premium = safe_float(premium)
+        premium_inr = convert_to_inr(original_premium, currency)
+        coverage_inr = convert_to_inr(safe_float(coverage), currency)
+        cash_value_inr = convert_to_inr(safe_float(cash_value), currency) if has_cv else 0.0
+
         doc = {
             "user_email": user_email.lower(),
             "policy_type": policy_type,
             "provider": provider,
-            "premium": safe_float(premium),
-            "coverage": safe_float(coverage),
+            "premium": premium_inr,
+            "original_premium": original_premium,
+            "original_currency": currency,
+            "coverage": coverage_inr,
             "next_due_date": next_due_date,
             "billing_cycle": billing_cycle,
-            "has_cash_value": str(has_cash_value).lower() in ["true", "1", "yes", "on"],
-            "cash_value": safe_float(cash_value) if str(has_cash_value).lower() in ["true", "1", "yes", "on"] else 0.0,
+            "has_cash_value": has_cv,
+            "cash_value": cash_value_inr,
             "created_at": datetime.utcnow()
         }
         res = db.insurances.insert_one(doc)
-        
-        # Add the first premium immediately to Expense history securely
+
+        # Add the first premium immediately to Expense history
         from app.models import Expense
         Expense.add_expense(
             user_email=user_email,
-            amount=premium,
+            amount=original_premium,
             category=f"Insurance: {policy_type}",
-            date_str=datetime.utcnow().strftime("%Y-%m-%d")
+            date_str=datetime.utcnow().strftime("%Y-%m-%d"),
+            currency=currency
         )
         doc['_id'] = res.inserted_id
         return doc

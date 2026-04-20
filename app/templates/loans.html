@@ -11,7 +11,7 @@
         </div>
         <div class="inline-flex items-center gap-2 px-4 py-2 bg-surface-input border border-surface-border rounded-xl">
             <span class="text-sm font-semibold text-content-muted">Total Liability:</span>
-            <span class="text-lg font-bold text-semantic-redText">${{ "{:,.2f}".format(total_liability) }}</span>
+            <span class="text-lg font-bold text-semantic-redText">₹{{ "{:,.2f}".format(total_liability) }}</span>
         </div>
     </div>
 
@@ -34,8 +34,18 @@
                     <input type="text" name="name" required class="block w-full text-sm border border-surface-border rounded-xl py-2.5 px-3.5 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="e.g. Car Loan">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Principal Amount ($)</label>
-                    <input type="number" name="principal_amount" step="0.01" required class="block w-full text-sm border border-surface-border rounded-xl py-2.5 px-3.5 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="0.00">
+                    <label class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Principal Amount</label>
+                    <div class="flex gap-2">
+                        <input type="number" name="principal_amount" step="0.01" required
+                               class="flex-1 min-w-0 text-sm border border-surface-border rounded-xl py-2.5 px-3.5 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="0.00">
+                        <select name="currency" id="loan_currency"
+                                class="text-sm border border-surface-border rounded-xl py-2.5 px-2 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer">
+                            {% for cur in supported_currencies %}
+                            <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <p class="text-xs text-content-muted mt-1 italic">💡 Stored in ₹ INR. Tax calculations use INR only.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -71,7 +81,13 @@
                         <div>
                             <h3 class="text-lg font-bold text-content">{{ loan.name }}</h3>
                             <p class="text-xs text-content-muted mt-0.5">
-                                ${{ "{:,.0f}".format(loan.principal_amount) }} at {{ loan.interest_rate }}% over {{ loan.tenure_months }} mos
+                                {% if loan.get('original_currency') and loan.get('original_currency') != 'INR' %}
+                                    {{ currency_symbols.get(loan.original_currency, '₹') }}{{ "{:,.0f}".format(loan.get('original_principal', loan.principal_amount)) }}
+                                    <span class="text-content-muted/70">({{ loan.original_currency }})</span>
+                                    → ₹{{ "{:,.0f}".format(loan.principal_amount) }} at {{ loan.interest_rate }}% over {{ loan.tenure_months }} mos
+                                {% else %}
+                                    ₹{{ "{:,.0f}".format(loan.principal_amount) }} at {{ loan.interest_rate }}% over {{ loan.tenure_months }} mos
+                                {% endif %}
                             </p>
                         </div>
                         
@@ -80,7 +96,7 @@
                         <form action="{{ url_for('main.pay_loan', loan_id=loan._id) }}" method="POST">
                             <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 bg-semantic-emeraldLight text-semantic-emeraldText text-sm font-semibold rounded-lg hover:bg-semantic-emerald text-white hover:text-white transition-all shadow-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
-                                Pay EMI (${{ "{:,.2f}".format(loan.emi) }})
+                                Pay EMI (₹{{ "{:,.2f}".format(loan.emi) }})
                             </button>
                         </form>
                         {% else %}
@@ -93,15 +109,15 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-surface-border">
                         <div>
                             <p class="text-xs text-content-muted uppercase tracking-wider mb-1">Monthly EMI</p>
-                            <p class="text-sm font-bold text-content">${{ "{:,.2f}".format(loan.emi) }}</p>
+                            <p class="text-sm font-bold text-content">₹{{ "{:,.2f}".format(loan.emi) }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-content-muted uppercase tracking-wider mb-1">Principal Paid</p>
-                            <p class="text-sm font-bold text-semantic-emeraldText">${{ "{:,.2f}".format(loan.principal_amount - loan.remaining_balance) }}</p>
+                            <p class="text-sm font-bold text-semantic-emeraldText">₹{{ "{:,.2f}".format(loan.principal_amount - loan.remaining_balance) }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-content-muted uppercase tracking-wider mb-1">Remaining Balance</p>
-                            <p class="text-sm font-bold text-semantic-redText">${{ "{:,.2f}".format(loan.remaining_balance) }}</p>
+                            <p class="text-sm font-bold text-semantic-redText">₹{{ "{:,.2f}".format(loan.remaining_balance) }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-content-muted uppercase tracking-wider mb-1">Status</p>
