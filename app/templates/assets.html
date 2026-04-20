@@ -11,7 +11,7 @@
         </div>
         <div class="bg-surface-card border border-surface-border px-6 py-4 rounded-xl shadow-sm">
             <p class="text-sm font-medium text-content-muted mb-1">Net Asset Wealth</p>
-            <p class="text-2xl font-bold text-primary">${{ "{:,.2f}".format(total_assets) }}</p>
+            <p class="text-2xl font-bold text-primary">₹{{ "{:,.2f}".format(total_assets) }}</p>
         </div>
     </div>
 
@@ -54,10 +54,20 @@
                             <!-- JS explicitly injects field HTML here depending on dropdown selection -->
                         </div>
 
-                        <!-- Universal Value Field -->
+                        <!-- Universal Value Field + Currency -->
                         <div>
-                            <label class="block text-sm font-medium text-content-muted mb-1.5" for="value">Estimated Gross Value ($)</label>
-                            <input type="number" id="value" name="value" step="0.01" required class="block w-full rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="e.g. 15000">
+                            <label class="block text-sm font-medium text-content-muted mb-1.5" for="value">Estimated Gross Value</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="value" name="value" step="0.01" required
+                                       class="flex-1 min-w-0 rounded-xl border border-surface-border bg-surface text-content px-4 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="e.g. 15000">
+                                <select name="currency" id="asset_currency"
+                                        class="text-sm border border-surface-border rounded-xl py-2.5 px-2 bg-surface text-content focus:border-primary focus:ring-1 focus:ring-primary transition-colors cursor-pointer">
+                                    {% for cur in supported_currencies %}
+                                    <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <p class="text-xs text-content-muted mt-1 italic">💡 Stored in ₹ INR internally.</p>
                         </div>
 
                         <!-- Smart Loan Linking -->
@@ -75,7 +85,7 @@
                                 <option value="" disabled selected>Choose active loan...</option>
                                 {% for loan in loans %}
                                     {% if loan.remaining_balance > 0 %}
-                                    <option value="{{ loan._id }}">{{ loan.name }} (Bal: ${{ "{:,.2f}".format(loan.remaining_balance) }})</option>
+                                    <option value="{{ loan._id }}">{{ loan.name }} (Bal: ₹{{ "{:,.2f}".format(loan.remaining_balance) }})</option>
                                     {% endif %}
                                 {% endfor %}
                             </select>
@@ -144,21 +154,27 @@
                             <div class="w-full">
                                 <div class="flex justify-between text-xs text-content-muted mb-1">
                                     <span>Gross Value</span>
-                                    <span>${{ "{:,.2f}".format(asset.value) }}</span>
+                                    <span>
+                                        {% if asset.get('original_currency') and asset.get('original_currency') != 'INR' %}
+                                            {{ currency_symbols.get(asset.original_currency, '₹') }}{{ "{:,.2f}".format(asset.get('original_value', asset.value)) }} ({{ asset.original_currency }}) → ₹{{ "{:,.2f}".format(asset.value) }}
+                                        {% else %}
+                                            ₹{{ "{:,.2f}".format(asset.value) }}
+                                        {% endif %}
+                                    </span>
                                 </div>
                                 <div class="flex justify-between text-xs text-semantic-redText mb-2">
                                     <span>Liabilities (Debt)</span>
-                                    <span>-${{ "{:,.2f}".format(asset.loan_balance) }}</span>
+                                    <span>-₹{{ "{:,.2f}".format(asset.loan_balance) }}</span>
                                 </div>
                                 <div class="flex justify-between items-end border-t border-surface-border pt-1">
                                     <p class="text-sm font-medium text-primary mb-0.5">True Equity</p>
-                                    <p class="text-lg font-bold text-content">${{ "{:,.2f}".format(asset.equity) }}</p>
+                                    <p class="text-lg font-bold text-content">₹{{ "{:,.2f}".format(asset.equity) }}</p>
                                 </div>
                             </div>
                         {% else %}
                             <div class="w-full">
                                 <p class="text-xs text-content-muted mb-0.5">Total Equity</p>
-                                <p class="text-lg font-bold text-content">${{ "{:,.2f}".format(asset.equity) }}</p>
+                                <p class="text-lg font-bold text-content">₹{{ "{:,.2f}".format(asset.equity) }}</p>
                             </div>
                         {% endif %}
                     </div>
@@ -171,7 +187,7 @@
                                 <input type="date" name="sold_date" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-content-muted mb-1">Sold Price ($)</label>
+                                <label class="block text-xs font-medium text-content-muted mb-1">Sold Price (₹ INR)</label>
                                 <input type="number" step="0.01" name="sold_price" placeholder="e.g. {{ asset.value }}" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
                             </div>
                             <div>
@@ -195,7 +211,7 @@
                                     <input type="text" name="category" value="{{ asset.category }}" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-content-muted mb-1">Gross Value ($)</label>
+                                    <label class="block text-xs font-medium text-content-muted mb-1">Gross Value (₹ INR)</label>
                                     <input type="number" step="0.01" name="value" value="{{ asset.value }}" required class="block w-full text-sm rounded-lg border border-surface-border bg-surface text-content px-3 py-2">
                                 </div>
                             </div>
@@ -250,15 +266,15 @@
                         <div class="w-full">
                             <div class="flex justify-between text-xs text-content-muted mb-1">
                                 <span>Sold Price</span>
-                                <span>${{ "{:,.2f}".format(asset.sold_price) }}</span>
+                                <span>${{ "{:,.2f}".format(asset.sold_price) }}</span></span>
                             </div>
                             <div class="flex justify-between items-end border-t border-surface-border pt-1">
                                 <p class="text-sm font-medium text-content mb-0.5">Asset Profit/Loss</p>
                                 {% set pnl = asset.sold_price - asset.value %}
                                 <p class="text-lg font-bold {% if pnl >= 0 %}text-semantic-emeraldText{% else %}text-semantic-redText{% endif %}">
-                                    {% if pnl > 0 %}+${{ "{:,.2f}".format(pnl) }}
-                                    {% elif pnl < 0 %}-${{ "{:,.2f}".format(pnl|abs) }}
-                                    {% else %}$0.00{% endif %}
+                                    {% if pnl > 0 %}+₹{{ "{:,.2f}".format(pnl) }}
+                                    {% elif pnl < 0 %}-₹{{ "{:,.2f}".format(pnl|abs) }}
+                                    {% else %}₹0.00{% endif %}
                                 </p>
                             </div>
                         </div>

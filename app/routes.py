@@ -2,6 +2,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from flask_mail import Mail, Message
 from app.utils.helpers import safe_float
+from app.utils.currency import SYMBOLS as CURRENCY_SYMBOLS, SUPPORTED as SUPPORTED_CURRENCIES
 from app.models import User, Expense, Income, Loan, Asset, Insurance, TaxProfile
 from app.utils.tax import calculate_tax
 from datetime import date
@@ -442,7 +443,9 @@ def profile():
         insights=insights,
         current_filters={'start_date': start_date, 'end_date': end_date, 'category': category_filter},
         total_liability=total_liability,
-        total_assets=total_assets
+        total_assets=total_assets,
+        currency_symbols=CURRENCY_SYMBOLS,
+        supported_currencies=SUPPORTED_CURRENCIES
     )
 
 
@@ -457,7 +460,14 @@ def loans():
     user = User.get_by_email(email)
     loans_list = Loan.get_all(email)
     total_liability = Loan.get_total_liability(email)
-    return render_template('loans.html', user=user, loans=loans_list, total_liability=total_liability)
+    return render_template(
+        'loans.html',
+        user=user,
+        loans=loans_list,
+        total_liability=total_liability,
+        currency_symbols=CURRENCY_SYMBOLS,
+        supported_currencies=SUPPORTED_CURRENCIES
+    )
 
 
 @main.route('/add_loan', methods=['POST'])
@@ -468,17 +478,18 @@ def add_loan():
     principal_amount = request.form.get('principal_amount')
     interest_rate = request.form.get('interest_rate')
     tenure_months = request.form.get('tenure_months')
-    
+    currency = request.form.get('currency', 'INR')
+
     if not all([name, principal_amount, interest_rate, tenure_months]):
         flash('All fields are required to add a loan.', 'error')
         return redirect(url_for('main.loans'))
-        
+
     try:
-        Loan.add_loan(email, name, safe_float(principal_amount), safe_float(interest_rate), int(tenure_months))
+        Loan.add_loan(email, name, safe_float(principal_amount), safe_float(interest_rate), int(tenure_months), currency)
         flash('Loan added successfully.', 'success')
     except Exception as e:
         flash(f'Error adding loan: {e}', 'error')
-        
+
     return redirect(url_for('main.loans'))
 
 
@@ -509,14 +520,14 @@ def add_expense():
     amount   = request.form.get('amount')
     category = request.form.get('category')
     date_str = request.form.get('date')
+    currency = request.form.get('currency', 'INR')
 
     if not amount or not category or not date_str:
         flash('All expense fields are required.', 'error')
         return redirect(url_for('main.profile'))
 
     amount = safe_float(amount)
-
-    Expense.add_expense(session['user_email'], amount, category, date_str)
+    Expense.add_expense(session['user_email'], amount, category, date_str, currency)
     flash('Expense added successfully.', 'success')
     return redirect(url_for('main.profile'))
 
@@ -543,14 +554,14 @@ def add_income():
     amount   = request.form.get('amount')
     source   = request.form.get('source')
     date_str = request.form.get('date')
+    currency = request.form.get('currency', 'INR')
 
     if not amount or not source or not date_str:
         flash('All income fields are required.', 'error')
         return redirect(url_for('main.profile'))
 
     amount = safe_float(amount)
-
-    Income.add_income(session['user_email'], amount, source, date_str)
+    Income.add_income(session['user_email'], amount, source, date_str, currency)
     flash('Income added successfully.', 'success')
     return redirect(url_for('main.profile'))
 
@@ -576,11 +587,15 @@ def assets():
     email = session['user_email']
     user_assets = Asset.get_all(email)
     total_assets = Asset.get_total_value(email)
-    
-    # Fetch user loans to populate the "Link Loan" dropdown
     user_loans = Loan.get_all(email)
-    
-    return render_template('assets.html', assets=user_assets, total_assets=total_assets, loans=user_loans)
+    return render_template(
+        'assets.html',
+        assets=user_assets,
+        total_assets=total_assets,
+        loans=user_loans,
+        currency_symbols=CURRENCY_SYMBOLS,
+        supported_currencies=SUPPORTED_CURRENCIES
+    )
 
 @main.route('/add_asset', methods=['POST'])
 @login_required
@@ -613,9 +628,9 @@ def sell_asset(asset_id):
         success, profit = Asset.sell_asset(asset_id, email, sold_price, sold_date, notes)
         if success:
             if profit < 0:
-                flash(f'Asset Sold. Warning: You took a cash hit of ${abs(profit):,.2f} because the loan balance was larger than the sale price. Income adjusted.', 'warning')
+                flash(f'Asset Sold. Warning: You took a cash hit of ₹{abs(profit):,.2f} because the loan balance was larger than the sale price. Income adjusted.', 'warning')
             else:
-                flash(f'Asset Sold successfully! ${profit:,.2f} cash was mapped to your Income after loan payments.', 'success')
+                flash(f'Asset Sold successfully! ₹{profit:,.2f} cash was mapped to your Income after loan payments.', 'success')
         else:
             flash(f'Could not sell asset: {profit}', 'danger')
     except Exception as e:
@@ -633,24 +648,30 @@ def insurance():
     email = session['user_email']
     user_policies = Insurance.get_all(email)
     total_cash_value = Insurance.get_total_cash_value(email)
-    
-    return render_template('insurance.html', policies=user_policies, total_cash_value=total_cash_value)
+    return render_template(
+        'insurance.html',
+        policies=user_policies,
+        total_cash_value=total_cash_value,
+        currency_symbols=CURRENCY_SYMBOLS,
+        supported_currencies=SUPPORTED_CURRENCIES
+    )
 
 @main.route('/add_insurance', methods=['POST'])
 @login_required
 def add_insurance():
     email = session['user_email']
-    policy_type = request.form.get('policy_type')
-    provider = request.form.get('provider')
-    premium = request.form.get('premium')
-    coverage = request.form.get('coverage')
+    policy_type   = request.form.get('policy_type')
+    provider      = request.form.get('provider')
+    premium       = request.form.get('premium')
+    coverage      = request.form.get('coverage')
     next_due_date = request.form.get('next_due_date')
     billing_cycle = request.form.get('billing_cycle')
     has_cash_value = request.form.get('has_cash_value')
-    cash_value = request.form.get('cash_value', 0)
+    cash_value    = request.form.get('cash_value', 0)
+    currency      = request.form.get('currency', 'INR')
 
     try:
-        Insurance.add_policy(email, policy_type, provider, premium, coverage, next_due_date, billing_cycle, has_cash_value, cash_value)
+        Insurance.add_policy(email, policy_type, provider, premium, coverage, next_due_date, billing_cycle, has_cash_value, cash_value, currency)
         flash('Insurance policy created! Initial premium has been logged as an Expense.', 'success')
     except Exception as e:
         flash(f'Error logging insurance: {str(e)}', 'error')

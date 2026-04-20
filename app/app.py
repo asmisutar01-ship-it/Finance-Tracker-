@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+import sys
+# Add the parent directory (project root) to sys.path so 'app' is recognized as a package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app.routes import main as main_blueprint
 
 # Global mail object – imported by routes

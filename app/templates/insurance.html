@@ -11,7 +11,7 @@
         </div>
         <div class="flex flex-col items-end">
             <p class="text-sm font-semibold text-content-muted uppercase tracking-wider">Total Cash Value</p>
-            <p class="text-2xl font-bold text-primary">${{ "{:,.2f}".format(total_cash_value) }}</p>
+            <p class="text-2xl font-bold text-primary">₹{{ "{:,.2f}".format(total_cash_value) }}</p>
         </div>
     </div>
 
@@ -48,14 +48,25 @@
                     <div class="grid grid-cols-2 gap-3">
                         <!-- Premium -->
                         <div>
-                            <label class="block text-sm font-medium text-content mb-1">Premium ($)</label>
+                            <label class="block text-sm font-medium text-content mb-1">Premium</label>
                             <input type="number" step="0.01" name="premium" placeholder="Amount" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
                         </div>
                         <!-- Coverage -->
                         <div>
-                            <label class="block text-sm font-medium text-content mb-1">Coverage ($)</label>
+                            <label class="block text-sm font-medium text-content mb-1">Coverage</label>
                             <input type="number" step="0.01" name="coverage" placeholder="Sum Assured" required class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content">
                         </div>
+                    </div>
+                    <!-- Currency selector for amounts -->
+                    <div>
+                        <label class="block text-sm font-medium text-content mb-1">Currency</label>
+                        <select name="currency" id="insurance_currency"
+                                class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer">
+                            {% for cur in supported_currencies %}
+                            <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-content-muted mt-1 italic">💡 Stored in ₹ INR. Tax uses INR only.</p>
                     </div>
 
                     <!-- Billing Logic -->
@@ -122,12 +133,18 @@
                         <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
                             <div>
                                 <p class="text-content-muted text-xs">Coverage</p>
-                                <p class="font-medium text-content">${{ "{:,.2f}".format(policy.coverage) }}</p>
+                                <p class="font-medium text-content">
+                                    {% if policy.get('original_currency') and policy.get('original_currency') != 'INR' %}
+                                        {{ currency_symbols.get(policy.original_currency, '₹') }}{{ "{:,.2f}".format(policy.get('original_premium', policy.premium)) }} ({{ policy.original_currency }}) → ₹{{ "{:,.2f}".format(policy.coverage) }}
+                                    {% else %}
+                                        ₹{{ "{:,.2f}".format(policy.coverage) }}
+                                    {% endif %}
+                                </p>
                             </div>
                             {% if policy.has_cash_value %}
                             <div>
                                 <p class="text-primary text-xs font-semibold">Cash Value</p>
-                                <p class="font-medium text-content">${{ "{:,.2f}".format(policy.cash_value) }}</p>
+                                <p class="font-medium text-content">₹{{ "{:,.2f}".format(policy.cash_value) }}</p>
                             </div>
                             {% else %}
                             <div>
@@ -141,7 +158,14 @@
                             <div>
                                 <p class="text-xs text-content-muted font-medium mb-0.5">Due: <span class="text-content font-semibold">{{ policy.next_due_date }}</span></p>
                                 <p class="text-[11px] text-content-muted uppercase tracking-wider">{{ policy.billing_cycle }} Premium</p>
-                                <p class="font-bold text-semantic-redText">-${{ "{:,.2f}".format(policy.premium) }}</p>
+                                <p class="font-bold text-semantic-redText">
+                                    {% if policy.get('original_currency') and policy.get('original_currency') != 'INR' %}
+                                        -{{ currency_symbols.get(policy.original_currency, '₹') }}{{ "{:,.2f}".format(policy.get('original_premium', policy.premium)) }}
+                                        <span class="text-xs text-content-muted">(₹{{ "{:,.0f}".format(policy.premium) }} INR)</span>
+                                    {% else %}
+                                        -₹{{ "{:,.2f}".format(policy.premium) }}
+                                    {% endif %}
+                                </p>
                             </div>
                             <form action="{{ url_for('main.pay_insurance_premium', policy_id=policy._id) }}" method="POST">
                                 <button type="submit" class="text-[11px] font-semibold text-primary hover:text-white bg-primary/10 hover:bg-primary transition-colors px-3 py-1.5 rounded-md border border-primary/20">
