@@ -1,10 +1,11 @@
 from functools import wraps
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app, send_file
 from flask_mail import Mail, Message
 from app.utils.helpers import safe_float
 from app.utils.currency import SYMBOLS as CURRENCY_SYMBOLS, SUPPORTED as SUPPORTED_CURRENCIES
 from app.models import User, Expense, Income, Loan, Asset, Insurance, TaxProfile
 from app.utils.tax import calculate_tax
+from app.utils.report_generator import generate_pdf_report, generate_excel_report
 from datetime import date
 
 main = Blueprint('main', __name__)
@@ -637,6 +638,64 @@ def sell_asset(asset_id):
         flash(f'Error: {str(e)}', 'danger')
 
     return redirect(url_for('main.assets'))
+
+# ──────────────────────────────────────────────
+# Report Generation
+# ──────────────────────────────────────────────
+
+@main.route('/generate_report', methods=['POST'])
+@login_required
+def generate_report():
+    email = session['user_email']
+    user = User.get_by_email(email)
+    
+    month_input = request.form.get('month') # expected format 'MM,YYYY'
+    report_format = request.form.get('format', 'pdf').lower()
+
+    if not month_input:
+        flash('Please select a month to generate the report.', 'warning')
+        return redirect(url_for('main.profile'))
+        
+    try:
+        m, y = month_input.split(',')
+        month_str = f"{y.strip()}-{m.strip()}" # converts to YYYY-MM
+    except Exception:
+        flash('Invalid month format. Please use MM,YYYY', 'danger')
+        return redirect(url_for('main.profile'))
+
+    # Fetch all records
+    incomes = Income.get_all(email)
+    expenses = Expense.get_all(email)
+
+    # Filter by month
+    monthly_incomes = [inc for inc in incomes if inc.get('date', '').startswith(month_str)]
+    monthly_expenses = [exp for exp in expenses if exp.get('date', '').startswith(month_str)]
+
+    total_income = sum(inc.get('amount', 0) for inc in monthly_incomes)
+    total_expenses = sum(exp.get('amount', 0) for exp in monthly_expenses)
+    net_savings = total_income - total_expenses
+
+    summary = {
+        'total_income': total_income,
+        'total_expenses': total_expenses,
+        'net_savings': net_savings
+    }
+
+    if report_format == 'excel':
+        buffer = generate_excel_report(monthly_incomes, monthly_expenses, summary, month_str)
+        filename = f"Finance_Report_{month_str}.xlsx"
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        buffer = generate_pdf_report(monthly_incomes, monthly_expenses, summary, month_str, user.get('name', 'User'))
+        filename = f"Finance_Report_{month_str}.pdf"
+        mimetype = "application/pdf"
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype=mimetype
+    )
 
 # ──────────────────────────────────────────────
 # Insurance Routes
