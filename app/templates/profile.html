@@ -46,9 +46,11 @@
         </div>
     </div>
 
-    <!-- ═══════════ Filters ═══════════ -->
-    <div class="animate-fade-in-up bg-surface-card rounded-xl border border-surface-border shadow-sm p-4">
-        <form action="{{ url_for('main.profile') }}" method="GET" class="flex flex-col sm:flex-row items-end gap-4">
+    <!-- ═══════════ Controls (Filters & Export) ═══════════ -->
+    <div class="animate-fade-in-up bg-surface-card rounded-xl border border-surface-border shadow-sm p-4 space-y-4">
+        
+        <!-- Filter Row -->
+        <form action="{{ url_for('main.profile') }}" method="GET" class="flex flex-col sm:flex-row items-end gap-4 pb-4 border-b border-surface-border/50">
             <div class="w-full sm:w-auto flex-grow">
                 <label for="start_date" class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Start Date</label>
                 <input type="date" name="start_date" id="start_date" value="{{ current_filters.start_date or '' }}" class="block w-full text-sm border border-surface-border rounded-lg py-2 px-3 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
@@ -74,6 +76,27 @@
             <div class="w-full sm:w-auto flex gap-2">
                 <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all">Filter</button>
                 <a href="{{ url_for('main.profile') }}" class="w-full sm:w-auto px-4 py-2 bg-surface-input text-content-muted text-sm font-semibold rounded-lg hover:bg-surface-hover text-center border border-surface-border transition-all flex items-center justify-center">Clear</a>
+            </div>
+        </form>
+
+        <!-- Export Row -->
+        <form action="{{ url_for('main.generate_report') }}" method="POST" class="flex flex-col sm:flex-row items-end gap-4">
+            <div class="w-full sm:w-auto flex-grow">
+                <label for="report_month" class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Export Month (MM,YYYY)</label>
+                <input type="text" name="month" id="report_month" placeholder="04,2026" pattern="(0[1-9]|1[0-2]),\d{4}" title="Format must be MM,YYYY (e.g., 04,2026)" required class="block w-full text-sm border border-surface-border rounded-lg py-2 px-3 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+            </div>
+            <div class="w-full sm:w-auto flex-grow">
+                <label for="report_format" class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Export Format</label>
+                <select name="format" id="report_format" class="block w-full text-sm border border-surface-border rounded-lg py-2 px-3 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                    <option value="pdf">PDF Report</option>
+                    <option value="excel">Excel (.xlsx)</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-auto flex gap-2">
+                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-semantic-emerald text-white text-sm font-semibold rounded-lg hover:bg-semantic-emerald/90 focus:outline-none focus:ring-2 focus:ring-semantic-emerald/40 transition-all flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    Download
+                </button>
             </div>
         </form>
     </div>
