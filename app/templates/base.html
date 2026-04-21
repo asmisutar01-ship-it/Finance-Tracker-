@@ -152,6 +152,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -193,7 +194,7 @@
         }
     </script>
 </head>
-<body class="bg-surface text-content min-h-screen flex flex-col antialiased transition-colors duration-300">
+<body hx-boost="true" class="bg-surface text-content min-h-screen flex flex-col antialiased transition-colors duration-300">
 
     <!-- ═══════════ Sidebar Overlay ═══════════ -->
     <div id="sidebar-overlay" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300" onclick="closeSidebar()"></div>
@@ -373,7 +374,7 @@
 
     <!-- Auto-dismiss flash toasts after 4 seconds -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        function initToasts() {
             document.querySelectorAll('.animate-slide-in').forEach(el => {
                 setTimeout(() => {
                     el.style.transition = 'opacity .4s, transform .4s';
@@ -382,7 +383,9 @@
                     setTimeout(() => el.remove(), 400);
                 }, 4000);
             });
-        });
+        }
+        document.addEventListener('DOMContentLoaded', initToasts);
+        document.addEventListener('htmx:load', initToasts);
     </script>
 </body>
 </html>
