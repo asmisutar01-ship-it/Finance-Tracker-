@@ -107,7 +107,7 @@
         </form>
 
         <!-- Export Row -->
-        <form action="{{ url_for('main.generate_report') }}" method="POST"
+        <form action="{{ url_for('main.generate_report') }}" method="POST" hx-boost="false"
             class="flex flex-col sm:flex-row items-end gap-4">
             <div class="w-full sm:w-auto flex-grow">
                 <label for="report_month"
@@ -229,7 +229,7 @@
                 <!-- Progress Bar -->
                 <div class="h-2 w-full bg-surface-hover rounded-full overflow-hidden border border-surface-border/50">
                     <div class="h-full rounded-full transition-all duration-500 {% if budget_progress >= 90 %}bg-semantic-red{% elif budget_progress >= 75 %}bg-semantic-orange{% else %}bg-semantic-emerald{% endif %}"
-                        style="width: {{ budget_progress }}%"></div>
+                        {{ ('style="width: ' ~ budget_progress ~ '%;"') | safe }}></div>
                 </div>
             </div>
         </div>
@@ -600,9 +600,12 @@
 </script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    function initCharts() {
         // Retrieve safely injected JSON data
-        const chartDataStr = document.getElementById('chart-data').textContent;
+        const chartDataElement = document.getElementById('chart-data');
+        if (!chartDataElement) return;
+
+        const chartDataStr = chartDataElement.textContent;
         const parsedData = chartDataStr ? JSON.parse(chartDataStr) : {};
 
         const pieLabels = parsedData.pieLabels || [];
@@ -617,8 +620,14 @@
 
         // Pie Chart
         if (pieData && pieData.length > 0) {
-            const ctxPie = document.getElementById('expensePieChart').getContext('2d');
-            new Chart(ctxPie, {
+            const canvasPie = document.getElementById('expensePieChart');
+            if (canvasPie) {
+                // Destroy existing chart if it exists
+                let existingChart = Chart.getChart(canvasPie);
+                if (existingChart) existingChart.destroy();
+
+                const ctxPie = canvasPie.getContext('2d');
+                new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
                     labels: pieLabels,
@@ -640,14 +649,20 @@
                     cutout: '65%'
                 }
             });
+            }
         }
 
         // Line Chart
         if (lineData && lineData.length > 0) {
-            const ctxLine = document.getElementById('spendingLineChart').getContext('2d');
-            const primaryColor = style.getPropertyValue('--brand-primary').trim() || '#6366f1';
+            const canvasLine = document.getElementById('spendingLineChart');
+            if (canvasLine) {
+                let existingChart = Chart.getChart(canvasLine);
+                if (existingChart) existingChart.destroy();
 
-            new Chart(ctxLine, {
+                const ctxLine = canvasLine.getContext('2d');
+                const primaryColor = style.getPropertyValue('--brand-primary').trim() || '#6366f1';
+
+                new Chart(ctxLine, {
                 type: 'line',
                 data: {
                     labels: lineLabels,
@@ -683,7 +698,11 @@
                     }
                 }
             });
+            }
         }
-    });
+    }
+    
+    document.addEventListener('DOMContentLoaded', initCharts);
+    document.addEventListener('htmx:load', initCharts);
 </script>
 {% endblock %}
