@@ -10,12 +10,13 @@ import string
 
 class User:
     @staticmethod
-    def create_user(name, email, password):
+    def create_user(name, email, password, phone=None):
         db = get_db()
         hashed_password = generate_password_hash(password)
         user_doc = {
             "name": name,
             "email": email.lower(),
+            "phone": phone,
             "password": hashed_password,
             "age": None,
             "education": "",
@@ -101,6 +102,12 @@ class User:
             return False, "That email is already in use."
         db.users.update_one({"email": old_email.lower()}, {"$set": {"email": new_email.lower()}})
         return True, new_email.lower()
+
+    @staticmethod
+    def update_phone(email, phone):
+        db = get_db()
+        db.users.update_one({"email": email.lower()}, {"$set": {"phone": phone}})
+
 
     @staticmethod
     def change_password(email, old_password, new_password):
