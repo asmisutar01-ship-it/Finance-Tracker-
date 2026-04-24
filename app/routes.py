@@ -54,9 +54,14 @@ def signup():
         name     = request.form.get('name', '').strip()
         email    = request.form.get('email', '').strip()
         password = request.form.get('password', '')
+        phone    = request.form.get('phone', '').strip()
 
-        if not name or not email or not password:
+        if not name or not email or not password or not phone:
             flash('All fields are required.', 'error')
+            return redirect(url_for('main.signup'))
+
+        if not phone.isdigit() or len(phone) < 10 or len(phone) > 15:
+            flash('Invalid phone number. Must be 10-15 digits.', 'error')
             return redirect(url_for('main.signup'))
 
         existing = User.get_by_email(email)
@@ -72,7 +77,7 @@ def signup():
             return redirect(url_for('main.login'))
 
         # Create user (is_verified=False)
-        User.create_user(name, email, password)
+        User.create_user(name, email, password, phone)
 
         # Generate + send OTP
         otp = User.generate_and_store_otp(email)
@@ -162,9 +167,38 @@ def login():
 
         session['user_email'] = user['email']
         session['user_name']  = user['name']
+
+        if not user.get('phone'):
+            return redirect(url_for('main.add_phone'))
+
         return redirect(url_for('main.profile'))
 
     return render_template('login.html')
+
+@main.route('/add-phone', methods=['GET', 'POST'])
+@login_required
+def add_phone():
+    email = session.get('user_email')
+    user = User.get_by_email(email)
+    
+    if user.get('phone'):
+        return redirect(url_for('main.profile'))
+        
+    if request.method == 'POST':
+        phone = request.form.get('phone', '').strip()
+        if not phone:
+            flash('Phone number is required.', 'error')
+            return redirect(url_for('main.add_phone'))
+            
+        if not phone.isdigit() or len(phone) < 10 or len(phone) > 15:
+            flash('Invalid phone number. Must be 10-15 digits.', 'error')
+            return redirect(url_for('main.add_phone'))
+            
+        User.update_phone(email, phone)
+        flash('Phone number added successfully.', 'success')
+        return redirect(url_for('main.profile'))
+        
+    return render_template('add_phone.html')
 
 
 @main.route('/logout')

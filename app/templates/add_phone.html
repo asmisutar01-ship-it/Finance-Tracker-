@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center animate-fade-in-up">
+    <div class="w-full max-w-md">
+        <div class="bg-surface-card rounded-2xl shadow-xl border border-surface-border overflow-hidden">
+            <div class="px-8 pt-10 pb-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-light to-primary text-white shadow-lg mb-5">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                    </div>
+                    <h1 class="text-2xl font-extrabold text-content tracking-tight">Add Phone Number</h1>
+                    <p class="mt-1.5 text-sm text-content-muted">A phone number is required to continue.</p>
+                </div>
+                
+                <!-- Form -->
+                <form action="{{ url_for('main.add_phone') }}" method="POST" class="space-y-5">
+                    <div>
+                        <label for="phone" class="block text-xs font-semibold text-content-muted uppercase tracking-wider mb-1.5">Phone Number</label>
+                        <input id="phone" name="phone" type="tel" pattern="[0-9]{10,15}" required class="block w-full px-4 py-3 text-sm border border-surface-border rounded-xl bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="1234567890">
+                    </div>
+
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 bg-primary text-white text-sm font-semibold rounded-xl shadow-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-all">
+                        Save Phone Number
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
