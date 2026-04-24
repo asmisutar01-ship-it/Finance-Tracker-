@@ -13,6 +13,8 @@ inside tax logic.
 """
 
 import logging
+import os
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +43,30 @@ SUPPORTED: list[str] = list(RATES.keys())
 # Core conversion helpers
 # ---------------------------------------------------------------------------
 
+def get_live_rate(currency: str) -> float | None:
+    """Fetch live exchange rate for currency -> INR with 5-second timeout."""
+    if currency == "INR":
+        return 1.0
+        
+    api_key = os.environ.get("CURRENCY_API_KEY")
+    if not api_key:
+        return None
+        
+    try:
+        url = f"https://v6.exchangerate-api.com/v6/{api_key}/latest/{currency}"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("result") == "success":
+            rates = data.get("conversion_rates", {})
+            if "INR" in rates:
+                return float(rates["INR"])
+    except Exception as exc:
+        log.error("ExchangeRate-API failed for %s: %s", currency, exc)
+    
+    return None
+
+
 def convert_to_inr(amount: float, currency: str) -> float:
     """
     Convert *amount* (in *currency*) to INR.
@@ -51,6 +77,13 @@ def convert_to_inr(amount: float, currency: str) -> float:
     """
     try:
         currency = (currency or "INR").upper().strip()
+        
+        # 1) Try Live Rate
+        live_rate = get_live_rate(currency)
+        if live_rate is not None:
+            return float(amount) * live_rate
+            
+        # 2) Fallback to static
         rate = RATES.get(currency)
         if rate is None:
             log.warning("Unknown currency '%s'; defaulting to INR.", currency)
@@ -71,6 +104,16 @@ def convert_from_inr(amount_inr: float, target_currency: str) -> float:
     """
     try:
         target_currency = (target_currency or "INR").upper().strip()
+        
+        if target_currency == "INR":
+            return float(amount_inr)
+            
+        # 1) Try Live Rate
+        live_rate = get_live_rate(target_currency)
+        if live_rate is not None and live_rate > 0:
+            return float(amount_inr) / live_rate
+
+        # 2) Fallback to static
         rate = RATES.get(target_currency)
         if rate is None:
             log.warning("Unknown target currency '%s'; defaulting to INR.", target_currency)
