@@ -63,7 +63,7 @@
                                 <select name="currency" id="asset_currency"
                                         class="text-sm border border-surface-border rounded-xl py-2.5 px-2 bg-surface text-content focus:border-primary focus:ring-1 focus:ring-primary transition-colors cursor-pointer">
                                     {% for cur in supported_currencies %}
-                                    <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                                    <option value="{{ cur }}" {% if cur == 'INR' %}selected{% endif %}>{{ currency_symbols[cur] }} {{ cur }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

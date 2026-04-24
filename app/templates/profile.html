@@ -338,7 +338,7 @@
                         <select name="currency" id="income_currency"
                             class="text-sm border border-surface-border rounded-xl py-2.5 px-2 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-semantic-emerald/20 focus:border-semantic-emerald transition-all cursor-pointer">
                             {% for cur in supported_currencies %}
-                            <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                            <option value="{{ cur }}" {% if cur == 'INR' %}selected{% endif %}>{{ currency_symbols[cur] }} {{ cur }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -441,7 +441,7 @@
                         <select name="currency" id="expense_currency"
                             class="text-sm border border-surface-border rounded-xl py-2.5 px-2 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-semantic-red/20 focus:border-semantic-red transition-all cursor-pointer">
                             {% for cur in supported_currencies %}
-                            <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                            <option value="{{ cur }}" {% if cur == 'INR' %}selected{% endif %}>{{ currency_symbols[cur] }} {{ cur }}</option>
                             {% endfor %}
                         </select>
                     </div>

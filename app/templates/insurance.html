@@ -63,7 +63,7 @@
                         <select name="currency" id="insurance_currency"
                                 class="block w-full text-sm border border-surface-border rounded-lg py-2.5 px-3 bg-surface-input text-content focus:bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer">
                             {% for cur in supported_currencies %}
-                            <option value="{{ cur }}">{{ currency_symbols[cur] }} {{ cur }}</option>
+                            <option value="{{ cur }}" {% if cur == 'INR' %}selected{% endif %}>{{ currency_symbols[cur] }} {{ cur }}</option>
                             {% endfor %}
                         </select>
                         <p class="text-xs text-content-muted mt-1 italic">💡 Stored in ₹ INR. Tax uses INR only.</p>
